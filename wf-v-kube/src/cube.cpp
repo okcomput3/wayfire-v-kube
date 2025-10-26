@@ -487,67 +487,109 @@ class desktop_only_workspace_node_t : public wf::scene::node_t
 };
 
 class cube_render_instance_t : public wf::scene::render_instance_t
-{
-    std::shared_ptr<cube_render_node_t> self;
-    wf::scene::damage_callback push_damage;
-
-    std::vector<std::vector<wf::scene::render_instance_uptr>> ws_instances;
-    std::vector<wf::region_t> ws_damage;
-    std::vector<wf::auxilliary_buffer_t> framebuffers;
-
-    // NEW: Framebuffers for window-only cubes
-    std::vector<wf::auxilliary_buffer_t> framebuffers_windows;
-    std::vector<std::vector<wf::auxilliary_buffer_t>> framebuffers_windows_rows;
-    
-//    std::vector<std::vector<wf::scene::render_instance_uptr>> ws_instances_windows;
- //   std::vector<std::vector<std::vector<wf::scene::render_instance_uptr>>> ws_instances_windows_rows;
-//    std::vector<wf::region_t> ws_damage_windows;
-//    std::vector<std::vector<wf::region_t>> ws_damage_windows_rows;
-
-// continuous window updates
-std::vector<std::unique_ptr<wf::scene::render_instance_manager_t>> ws_instance_managers_windows;
-std::vector<std::vector<std::unique_ptr<wf::scene::render_instance_manager_t>>> ws_instance_managers_windows_rows;
-
-    // Multiple cube workspaces for all rows
-    std::vector<std::vector<std::vector<wf::scene::render_instance_uptr>>> ws_instances_rows;
-    std::vector<std::vector<wf::region_t>> ws_damage_rows;
-    std::vector<std::vector<wf::auxilliary_buffer_t>> framebuffers_rows;
-
-
-    std::vector<wf::region_t> ws_damage_windows;
-    std::vector<std::vector<wf::region_t>> ws_damage_windows_rows;
-
-    wf::signal::connection_t<wf::scene::node_damage_signal> on_cube_damage =
-        [=] (wf::scene::node_damage_signal *ev)
     {
-        push_damage(ev->region);
-    };
+        std::shared_ptr<cube_render_node_t> self;
+        wf::scene::damage_callback push_damage;
 
-  public:
-   cube_render_instance_t(cube_render_node_t *self, wf::scene::damage_callback push_damage)
-{
-    this->self = std::dynamic_pointer_cast<cube_render_node_t>(self->shared_from_this());
-    this->push_damage = push_damage;
-    self->connect(&on_cube_damage);
-    
-    ws_damage.resize(self->workspaces.size());
-    framebuffers.resize(self->workspaces.size());
-    ws_instances.resize(self->workspaces.size());
-    
-    // Initialize storage for all rows
-    int num_rows = self->workspaces_all_rows.size();
-    ws_damage_rows.resize(num_rows);
-    framebuffers_rows.resize(num_rows);
-    ws_instances_rows.resize(num_rows);
-    
-    // IMPORTANT: Resize window storage BEFORE creating managers
-    ws_damage_windows.resize(self->workspaces_windows.size());
-    framebuffers_windows.resize(self->workspaces_windows.size());
-    ws_instance_managers_windows.resize(self->workspaces_windows.size());
-    
-    ws_damage_windows_rows.resize(num_rows);
-    framebuffers_windows_rows.resize(num_rows);
-    ws_instance_managers_windows_rows.resize(num_rows);
+        std::vector<std::vector<wf::scene::render_instance_uptr>> ws_instances;
+        std::vector<wf::region_t> ws_damage;
+        std::vector<wf::auxilliary_buffer_t> framebuffers;
+
+        // Framebuffers for window-only cubes
+        std::vector<wf::auxilliary_buffer_t> framebuffers_windows;
+        std::vector<std::vector<wf::auxilliary_buffer_t>> framebuffers_windows_rows;
+        
+        // Continuous window updates
+        std::vector<std::unique_ptr<wf::scene::render_instance_manager_t>> ws_instance_managers_windows;
+        std::vector<std::vector<std::unique_ptr<wf::scene::render_instance_manager_t>>> ws_instance_managers_windows_rows;
+
+        // Multiple cube workspaces for all rows
+        std::vector<std::vector<std::vector<wf::scene::render_instance_uptr>>> ws_instances_rows;
+        std::vector<std::vector<wf::region_t>> ws_damage_rows;
+        std::vector<std::vector<wf::auxilliary_buffer_t>> framebuffers_rows;
+
+        std::vector<wf::region_t> ws_damage_windows;
+        std::vector<std::vector<wf::region_t>> ws_damage_windows_rows;
+
+        // FIXED: Dirty flags for conditional realloc
+        std::vector<bool> window_dirty;
+        std::vector<std::vector<bool>> window_rows_dirty;
+
+        // FIXED: Pending allocation flags to defer alloc until valid geometry
+        std::vector<bool> pending_alloc_desktop;
+        std::vector<bool> pending_alloc_windows;
+        std::vector<std::vector<bool>> pending_alloc_windows_rows;
+        std::vector<std::vector<bool>> pending_alloc_desktop_rows;
+
+        wf::signal::connection_t<wf::scene::node_damage_signal> on_cube_damage =
+            [=] (wf::scene::node_damage_signal *ev)
+        {
+            push_damage(ev->region);
+        };
+
+      public:
+        // FIXED: Constructor - No allocations here; just resize vectors and set pending flags
+        // This avoids segfault on invalid geometry during init
+        cube_render_instance_t(cube_render_node_t *self, wf::scene::damage_callback push_damage)
+        {
+            this->self = std::dynamic_pointer_cast<cube_render_node_t>(self->shared_from_this());
+            this->push_damage = push_damage;
+            self->connect(&on_cube_damage);
+            
+            ws_damage.resize(self->workspaces.size());
+            framebuffers.resize(self->workspaces.size());
+            ws_instances.resize(self->workspaces.size());
+            
+            // Initialize storage for all rows
+            int num_rows = self->workspaces_all_rows.size();
+            ws_damage_rows.resize(num_rows);
+            framebuffers_rows.resize(num_rows);
+            ws_instances_rows.resize(num_rows);
+            
+            // IMPORTANT: Resize window storage BEFORE creating managers
+            ws_damage_windows.resize(self->workspaces_windows.size());
+            framebuffers_windows.resize(self->workspaces_windows.size());
+            ws_instance_managers_windows.resize(self->workspaces_windows.size());
+            
+            ws_damage_windows_rows.resize(num_rows);
+            framebuffers_windows_rows.resize(num_rows);
+            ws_instance_managers_windows_rows.resize(num_rows);
+            
+            for (int row = 0; row < num_rows; row++)
+            {
+                ws_damage_windows_rows[row].resize(self->workspaces_windows_rows[row].size());
+                framebuffers_windows_rows[row].resize(self->workspaces_windows_rows[row].size());
+                ws_instance_managers_windows_rows[row].resize(self->workspaces_windows_rows[row].size());
+            }
+            
+            // FIXED: No allocations - set pending flags to true for all
+            auto bbox = self->cube->output->get_layout_geometry();
+            const float scale = self->cube->output->handle->scale;
+            
+            // Top row desktops - pending
+            pending_alloc_desktop.assign(self->workspaces.size(), bbox.width > 0 && bbox.height > 0);
+            
+            // All rows desktops - pending
+            pending_alloc_desktop_rows.resize(num_rows);
+            for (int row = 0; row < num_rows; ++row) {
+                pending_alloc_desktop_rows[row].assign(self->workspaces_all_rows[row].size(), bbox.width > 0 && bbox.height > 0);
+            }
+            
+            // Window buffers - top row pending
+            pending_alloc_windows.assign(self->workspaces_windows.size(), bbox.width > 0 && bbox.height > 0);
+            
+            // Window buffers - all rows pending
+            pending_alloc_windows_rows.resize(num_rows);
+            for (int row = 0; row < num_rows; ++row) {
+                pending_alloc_windows_rows[row].assign(self->workspaces_windows_rows[row].size(), bbox.width > 0 && bbox.height > 0);
+            }
+            
+            // FIXED: Dirty flags init
+            window_dirty.assign(self->workspaces_windows.size(), false);
+            window_rows_dirty.resize(num_rows);
+            for (int row = 0; row < num_rows; ++row) {
+                window_rows_dirty[row].assign(self->workspaces_windows_rows[row].size(), false);
+            }
     
     for (int row = 0; row < num_rows; row++)
     {
@@ -640,29 +682,33 @@ std::vector<std::vector<std::unique_ptr<wf::scene::render_instance_manager_t>>> 
     }
 }
 
-    ~cube_render_instance_t()
-    {}
+   ~cube_render_instance_t()
+        {
+            // Explicitly free buffers on destruction
+            for (auto& fb : framebuffers) fb.free();
+            for (auto& row : framebuffers_rows) {
+                for (auto& fb : row) fb.free();
+            }
+            for (auto& fb : framebuffers_windows) fb.free();
+            for (auto& row : framebuffers_windows_rows) {
+                for (auto& fb : row) fb.free();
+            }
+        }
 
 void schedule_instructions(
     std::vector<wf::scene::render_instruction_t>& instructions,
     const wf::render_target_t& target, wf::region_t& damage) override
 {
-    if (self->cube->enable_caps)
+
+      if (self->cube->enable_caps)
     {
         self->cube->render_cap_textures();
     }
+   auto bbox = self->get_bounding_box();
+            damage ^= bbox;
 
-    for (auto& fb : framebuffers_windows)
-    {
-        fb.free();
-    }
-    for (auto& row : framebuffers_windows_rows)
-    {
-        for (auto& fb : row)
-        {
-            fb.free();
-        }
-    }
+            const float scale = self->cube->output->handle->scale;
+            bool resize_dirty = false;  // TODO: Set from output resize signal
 
     instructions.push_back(wf::scene::render_instruction_t{
         .instance = this,
@@ -670,9 +716,7 @@ void schedule_instructions(
         .damage   = damage & self->get_bounding_box(),
     });
 
-    auto bbox = self->get_bounding_box();
-    damage ^= bbox;
-
+  
     // Render top cube workspaces (current row) - WITH BACKGROUND
     for (int i = 0; i < (int)ws_instances.size(); i++)
     {
