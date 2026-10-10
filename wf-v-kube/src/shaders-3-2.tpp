@@ -62,6 +62,7 @@ uniform mat4 model;
 uniform mat4 VP;
 uniform int  deform;
 uniform float ease;
+uniform float popout_scale;
 
 vec2 interpolate2D(vec2 v0, vec2 v1, vec2 v2) {
     return vec2(gl_TessCoord.x) * v0
@@ -84,8 +85,10 @@ void main() {
     tp = (model * vec4(tp, 1.0)).xyz;
 
     if(deform > 0) {
-        float r = 0.5;
-        float d = distance(tp.xz, vec2(0, 0));
+        // Deform in the layer's own scale. A fixed radius collapses popped
+        // windows onto the cylinder and exaggerates their star deformation.
+        float r = 0.5 * popout_scale;
+        float d = max(length(tp.xz), 0.000001);
         float scale = 1.0;
         if(deform == 1)
             scale = r / d;
@@ -111,6 +114,7 @@ uniform float cameraYOffset;
 uniform float cubeVerticalOffset;  // Y position of the cube being rendered
 out vec2 guv;
 out vec3 colorFactor;
+out highp vec3 lightingPosition;
 #define AL 0.3    // ambient lighting
 #define DL (1.0-AL) // diffuse lighting
 void main() {
@@ -133,12 +137,15 @@ void main() {
         colorFactor = vec3(1.0, 1.0, 1.0);
     gl_Position = gl_in[0].gl_Position;
     guv = tesuv[0];
+    lightingPosition = tePosition[0];
     EmitVertex();
     gl_Position = gl_in[1].gl_Position;
     guv = tesuv[1];
+    lightingPosition = tePosition[1];
     EmitVertex();
     gl_Position = gl_in[2].gl_Position;
     guv = tesuv[2];
+    lightingPosition = tePosition[2];
     EmitVertex();
 })";
 /*
@@ -150,6 +157,10 @@ in highp vec2 guv;
 in highp vec3 colorFactor;
 layout(location = 0) out highp vec4 outColor;
 uniform highp sampler2D smp;
+uniform float surface_opacity;
+uniform bool depth_only;
+uniform bool translucent_only;
+uniform bool window_layer;
 void main() {
     highp vec4 texColor = texture(smp, guv);
     outColor = vec4(texColor.rgb * colorFactor, texColor.a);
@@ -162,8 +173,40 @@ precision highp float;
 precision highp sampler2D;
 in highp vec2 guv;
 in highp vec3 colorFactor;
+in highp vec3 lightingPosition;
 layout(location = 0) out highp vec4 outColor;
 uniform highp sampler2D smp;
+uniform float surface_opacity;
+uniform bool depth_only;
+uniform bool translucent_only;
+uniform bool window_layer;
+
+
+uniform bool dynamic_lighting;
+uniform highp float lighting_time;
+uniform highp float lighting_row;
+uniform highp float lighting_radius;
+uniform mediump float lighting_strength;
+
+// Three independently phased point lights orbit within this row's volume.
+// Apply only to RGB: coverage, transparency, blur masks and depth stay intact.
+highp vec3 interiorLights(highp vec3 world) {
+    if (!dynamic_lighting) return vec3(0.0);
+    highp vec3 p = world - vec3(0.0, lighting_row, 0.0);
+    highp float radius = max(lighting_radius, 0.1);
+    highp vec3 result = vec3(0.0);
+    for (int i = 0; i < 3; ++i) {
+        highp float phase = float(i) * 2.0943951 + lighting_row * 0.73;
+        highp float angle = lighting_time * (0.8 + float(i) * 0.13) + phase;
+        highp vec3 point = vec3(radius * 0.58 * cos(angle),
+            0.30 * sin(lighting_time * 0.71 + phase), radius * 0.58 * sin(angle));
+        highp vec3 delta = (p - point) / vec3(radius, 0.5, radius);
+        highp float attenuation = 1.0 / (1.0 + 5.0 * dot(delta, delta));
+        highp vec3 hue = 0.5 + 0.5 * cos(lighting_time * 0.35 + phase + vec3(0.0, 2.0943951, 4.1887902));
+        result += hue * attenuation;
+    }
+    return result * lighting_strength;
+}
 
 // Function to calculate rounded corner mask
 float roundedCornerMask(vec2 uv, float radius) {
@@ -193,11 +236,21 @@ void main() {
     float corner_radius = 0.08;  // Adjust this value to control corner roundness
     float corner_mask = roundedCornerMask(guv, corner_radius);
     float edge_mask = edgeAntiAliasMask(guv);
-    float final_mask = min(corner_mask, edge_mask);
+    // Workspace rounding belongs to the desktop, not to window fragments
+    // split across faces. Their original texture already carries window alpha.
+    float final_mask = window_layer ? 1.0 : min(corner_mask, edge_mask);
     
     // Apply lighting and masking
-    vec3 finalColor = texColor.rgb * colorFactor;
+    vec3 finalColor = texColor.rgb * colorFactor * final_mask;
     float finalAlpha = texColor.a * final_mask;
     
-    outColor = vec4(finalColor, finalAlpha);
+    // Discard holes before they can write depth over another window/face.
+    if (finalAlpha <= 0.0) {
+        discard;
+    }
+    vec4 color = vec4(finalColor, finalAlpha) * surface_opacity;
+    if (depth_only && color.a < 0.999) discard;
+    if (translucent_only && color.a >= 0.999) discard;
+    color.rgb = min(vec3(color.a), color.rgb + color.a * interiorLights(lightingPosition));
+    outColor = color;
 })";

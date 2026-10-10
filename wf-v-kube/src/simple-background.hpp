@@ -5,7 +5,7 @@
 
 class wf_cube_simple_background : public wf_cube_background_base
 {
-    wf::option_wrapper_t<wf::color_t> background_color{"cube/background"};
+    wf::option_wrapper_t<wf::color_t> background_color{"vertical_kube/background"};
 
   public:
     wf_cube_simple_background();

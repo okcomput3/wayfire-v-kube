@@ -16,7 +16,7 @@ wf_cube_background_skydome::wf_cube_background_skydome(wf::output_t *output)
 {
     this->output = output;
     load_program();
-    reload_texture();
+    wf::gles::run_in_context([&] { reload_texture(); });
 }
 
 wf_cube_background_skydome::~wf_cube_background_skydome()
@@ -134,14 +134,17 @@ void wf_cube_background_skydome::render_frame(const wf::render_target_t& fb,
 
     if (tex == (uint32_t)-1)
     {
-        GL_CALL(glClearColor(TEX_ERROR_FLAG_COLOR));
-        GL_CALL(glClear(GL_COLOR_BUFFER_BIT));
+        OpenGL::clear(fallback_color);
 
         return;
     }
 
     wf::gles::bind_render_buffer(fb);
     program.use(wf::TEXTURE_TYPE_RGBA);
+    program.uniform1f("surface_opacity", 1.0f);
+    program.uniform1i("depth_only", 0);
+    program.uniform1i("dynamic_lighting", 0);
+    program.uniform1i("translucent_only", 0);
 
     auto rotation = glm::rotate(glm::mat4(1.0),
         (float)(attribs.cube_animation.offset_y * 0.5),

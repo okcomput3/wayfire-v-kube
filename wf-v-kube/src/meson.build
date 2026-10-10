@@ -1,10 +1,13 @@
 filters = shared_module('vertical_kube', 
     [
         'cube.cpp',
+        'popout-compositor.cpp',
         'simple-background.cpp',
+        'shader-background.cpp',
+        'image-background.cpp',
         'skydome.cpp',
         'cubemap.cpp'
     ],
-    dependencies: [wayfire],
+    dependencies: [wayfire, blur_base],
     install: true,
-    install_dir: join_paths(get_option('libdir'), 'wayfire'))
+    install_dir: wayfire.get_variable(pkgconfig: 'plugindir'))

@@ -18,11 +18,11 @@ class wf_cube_background_cubemap : public wf_cube_background_base
 
     OpenGL::program_t program;
     GLuint tex = -1;
-    GLuint vbo_cube_vertices;
-    GLuint ibo_cube_indices;
+    GLuint vbo_cube_vertices = 0;
+    GLuint ibo_cube_indices = 0;
 
     std::string last_background_image;
-    wf::option_wrapper_t<std::string> background_image{"cube/cubemap_image"};
+    wf::option_wrapper_t<std::string> background_image{"vertical_kube/cubemap_image"};
 };
 
 #endif /* end of include guard: WF_CUBE_CUBEMAP_HPP */

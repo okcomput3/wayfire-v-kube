@@ -61,6 +61,8 @@ void wf_cube_background_cubemap::reload_texture()
             GL_CALL(glDeleteBuffers(1, &vbo_cube_vertices));
             GL_CALL(glDeleteBuffers(1, &ibo_cube_indices));
             tex = -1;
+            vbo_cube_vertices = 0;
+            ibo_cube_indices = 0;
         }
 
         if (tex != (uint32_t)-1)
@@ -88,8 +90,7 @@ void wf_cube_background_cubemap::render_frame(const wf::render_target_t& fb,
 
     if (tex == (uint32_t)-1)
     {
-        GL_CALL(glClearColor(TEX_ERROR_FLAG_COLOR));
-        GL_CALL(glClear(GL_COLOR_BUFFER_BIT));
+        OpenGL::clear(fallback_color);
         return;
     }
 

@@ -65,7 +65,7 @@
 			<_long>Creates a larger cube showing only windows without background.</_long>
 			<option name="enable_window_popout" type="bool">
 				<_short>Enable window popout</_short>
-				<_long>Enables rendering of a larger cube showing only windows floating above the main cube.</_long>
+				<_long>Enables a separate floating window cube, retaining native window blur with the workspace wallpaper as its backdrop. Disable to render complete workspaces on the main cube. Change while the cube is closed.</_long>
 				<default>true</default>
 			</option>
 			<option name="popout_scale" type="double">
@@ -85,6 +85,40 @@
 				<precision>0.01</precision>
 			</option>
 		</group>
+        <group>
+            <_short>Desktop glass</_short>
+            <option name="desktop_opacity" type="double">
+                <_short>Desktop opacity</_short>
+                <_long>Opacity of cube desktop faces. Popped-out windows keep their separate opacity.</_long>
+                <default>1.0</default><min>0.0</min><max>1.0</max><precision>0.01</precision>
+            </option>
+            <option name="desktop_blur" type="bool">
+                <_short>Blur behind desktop faces</_short>
+                <_long>Frosted glass using the configured Wayfire blur method. Requires desktop opacity below 1.</_long>
+                <default>false</default>
+            </option>
+            <option name="cap_blur" type="bool">
+                <_short>Blur behind caps</_short>
+                <_long>Frosted glass behind translucent caps using the configured Wayfire blur method.</_long>
+                <default>false</default>
+            </option>
+        </group>
+        <group>
+            <_short>Interior lighting</_short>
+            <option name="dynamic_lighting" type="bool">
+                <_short>Orbiting colored lights</_short>
+                <_long>Animate three hue-changing point lights inside each cube, illuminating faces, windows and caps.</_long>
+                <default>false</default>
+            </option>
+            <option name="lighting_strength" type="double">
+                <_short>Interior light strength</_short>
+                <default>0.7</default><min>0.0</min><max>2.0</max><precision>0.05</precision>
+            </option>
+            <option name="lighting_speed" type="double">
+                <_short>Interior light speed</_short>
+                <default>1.0</default><min>0.1</min><max>4.0</max><precision>0.1</precision>
+            </option>
+        </group>
 		<!-- Cube Caps -->
 		<group>
 			<_short>Cube Caps</_short>
@@ -157,10 +191,23 @@
 			<precision>0.01</precision>
 		</option>
 		<!-- Background -->
+        <option name="shader_resolution_scale" type="double">
+            <_short>Shader background resolution</_short>
+            <_long>Render the nebula at this fraction of output resolution and smoothly upscale. 1.0 is full detail; 0.75 reduces shader pixels by about 44%. Other cube surfaces stay full resolution.</_long>
+            <default>0.75</default><min>0.25</min><max>1.0</max><precision>0.05</precision>
+        </option>
 		<option name="background_mode" type="string">
 			<_short>Background mode</_short>
-			<_long>Sets the background mode.</_long>
+			<_long>Selects a solid color, flat picture, skydome, cubemap, or animated shader.</_long>
 			<default>simple</default>
+			<desc>
+				<value>shader</value>
+				<_name>Animated shader</_name>
+			</desc>
+			<desc>
+				<value>image</value>
+				<_name>Picture</_name>
+			</desc>
 			<desc>
 				<value>simple</value>
 				<_name>Simple</_name>
@@ -174,6 +221,12 @@
 				<_name>Cubemap</_name>
 			</desc>
 		</option>
+		<option name="background_image" type="string">
+            <_short>Background picture</_short>
+            <_long>PNG or JPEG picture stretched to fill the output in image mode. Use an absolute path. If unavailable, the background color is used.</_long>
+            <hint>file</hint>
+            <default></default>
+        </option>
 		<option name="background" type="color">
 			<_short>Background color</_short>
 			<_long>Sets the background color for the simple background mode.</_long>
