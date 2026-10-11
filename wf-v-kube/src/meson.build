@@ -8,6 +8,6 @@ filters = shared_module('vertical_kube',
         'skydome.cpp',
         'cubemap.cpp'
     ],
-    dependencies: [wayfire, blur_base],
+    dependencies: [wayfire, blur_base, dependency('threads')],
     install: true,
     install_dir: wayfire.get_variable(pkgconfig: 'plugindir'))

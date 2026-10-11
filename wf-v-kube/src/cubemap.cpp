@@ -138,12 +138,12 @@ void wf_cube_background_cubemap::render_frame(const wf::render_target_t& fb,
     glVertexAttribPointer(vertex, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
     auto model = glm::rotate(glm::mat4(1.0),
-        float(attribs.cube_animation.rotation),
+        float(attribs.frame_rotation),
         glm::vec3(0, 1, 0));
 
     glm::vec3 look_at{0.,
-        (double)-attribs.cube_animation.offset_y,
-        (double)attribs.cube_animation.offset_z};
+        (double)-attribs.frame_offset_y,
+        (double)attribs.frame_offset_z};
 
     auto view = glm::lookAt(glm::vec3(0., 0., 0.), look_at, glm::vec3(0., 1., 0.));
     auto vp   = wf::gles::output_transform(fb) * attribs.projection * view;

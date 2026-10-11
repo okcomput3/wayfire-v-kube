@@ -22,6 +22,8 @@ precision mediump float;
 
 uniform float u_time;
 uniform vec2 u_resolution;
+uniform vec2 u_uv_origin;
+uniform vec2 u_uv_scale;
 varying vec2 v_uv;
 
 #define iterations 4
@@ -58,7 +60,7 @@ void main() {
     vec2 iResolution = u_resolution;
     float iTime = u_time / 3.0;
 
-    vec2 fragCoord = v_uv * iResolution;
+    vec2 fragCoord = (u_uv_origin + v_uv * u_uv_scale) * iResolution;
     vec2 uv2 = 2.0 * fragCoord.xy / iResolution.xy - 1.0;
     vec2 uvs = uv2 * iResolution.xy / max(iResolution.x, iResolution.y);
 
@@ -198,7 +200,7 @@ wf_cube_shader_background::~wf_cube_shader_background()
 }
 
 void wf_cube_shader_background::render_frame(const wf::render_target_t& target,
-    wf_cube_animation_attribs&)
+    wf_cube_animation_attribs& attribs)
 {
     if (background_program.get_program_id(wf::TEXTURE_TYPE_RGBA) == 0)
     {
@@ -224,13 +226,10 @@ void wf_cube_shader_background::render_frame(const wf::render_target_t& target,
 
     background_program.use(wf::TEXTURE_TYPE_RGBA);
 
-    static auto start_time = std::chrono::steady_clock::now();
-    auto current_time = std::chrono::steady_clock::now();
-    float elapsed = std::chrono::duration<float>(current_time - start_time).count();
-    background_program.uniform1f("u_time", elapsed);
-
-    auto geom = target.geometry;
-    background_program.uniform2f("u_resolution", (float)geom.width, (float)geom.height);
+    background_program.uniform1f("u_time", attribs.frame_time);
+    background_program.uniform2f("u_resolution", attribs.background_size.x, attribs.background_size.y);
+    background_program.uniform2f("u_uv_origin", attribs.background_uv_origin.x, attribs.background_uv_origin.y);
+    background_program.uniform2f("u_uv_scale", attribs.background_uv_scale.x, attribs.background_uv_scale.y);
 
     GL_CALL(glBindBuffer(GL_ARRAY_BUFFER, background_vbo));
     background_program.attrib_pointer("position", 2, 0, nullptr);

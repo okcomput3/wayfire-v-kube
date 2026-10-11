@@ -54,6 +54,9 @@ rotate_right = <ctrl> <alt> KEY_RIGHT
 rotate_up = <ctrl> <alt> KEY_UP
 rotate_down = <ctrl> <alt> KEY_DOWN
 
+# Mirroring
+mirror_outputs = true        # Show the activating monitor's cube on all monitors
+
 # Effects
 deform = 1                    # 0=None, 1=Cylinder, 2=Star
 light = true                  # Enable lighting effects
@@ -186,3 +189,113 @@ sudo ninja -C build uninstall
 ```
 
 For staged packaging, use `DESTDIR=/path/to/staging meson install -C build`.
+
+## Mirrored multi-monitor cube
+
+With `mirror_outputs = true` (the default), activate the cube on any monitor to
+show that monitor's workspace cube on every connected monitor. Rotation, zoom,
+and row navigation share one controller. This mirrors the same content; it does
+not combine the monitors into a wider workspace. On closing, each monitor selects
+the same workspace coordinate, clamped to its own grid. Normal desktops resume
+on their own monitors. Set the option to `false` for independent cubes.
+
+While the cube is open, press **Ctrl+K** to smoothly join the mirrored views
+into **one panoramic cube spanning the monitor layout**. Each face contains the
+monitors' own desktop contents side by side, ordered left to right. Rotation,
+zoom and vertical navigation operate on that shared view. Press Ctrl+K again to
+return to mirrored views. Releasing the activation button animates back to each
+monitor's own desktop while remembering your chosen mode. In panoramic mode,
+the joined cube/star/cylinder stays joined as it flattens and zooms into the
+desktops; closing does not run the Ctrl+K split transition. Reopening the cube,
+even from another monitor, restores that mode; only Ctrl+K changes it during
+the running Wayfire session. The binding is configurable as
+`toggle_panorama = <ctrl> KEY_K` in `[vertical_kube]`.
+
+All participating outputs consume one shared animation snapshot before the
+controller advances it. The procedural background uses continuous panoramic
+coordinates, and caps and lighting use the shared frame clock. This coordinates
+rendering; it does not frame-lock hardware scanout. The universal recorder below
+collects these matched slices into one video stream.
+
+Panoramic mode requires the same workspace grid dimensions on each monitor.
+It captures all participating desktops, so it uses more GPU memory and rendering
+work than mirroring. The first implementation is intended for a horizontal
+monitor arrangement. Each desktop occupies an equal-width segment of the face.
+
+If another effect has reserved a monitor, mirrored activation is declined as a
+whole. Disconnecting a participating monitor closes the cube safely. Monitors
+connected while it is open join on the next activation.
+
+### Simulate three monitors on one screen
+
+Run from a terminal inside your Wayland desktop, from this repository:
+
+```bash
+python3 tools/three-monitor-demo.py
+```
+
+This launches your `/way/wayfire` installation as a separate nested compositor,
+with three 640×360 monitor windows and an interactive terminal on each. It copies
+your configured wallpaper from `~/.config/wf-shell.ini`, plus cube effects, blur
+settings and workspace grid from `~/.config/wayfire.ini`. Use `--plain` to select
+the minimal blue test scene instead. Existing apps in the main session are not
+copied, and main-session autostart services are not launched again. Arrange the three
+windows side by side. The test uses its own temporary config and logs; it does
+not change your main Wayfire configuration or physical output settings.
+
+- Hold **Alt+Shift+left mouse** inside a test monitor and drag to rotate.
+- **Alt+Shift+arrow keys** rotate or change rows; scroll to zoom.
+- **Ctrl+K** while open joins the three views into one panoramic cube; press again to return.
+- Release the mouse button to close the cube.
+- **Alt+Shift+Enter** opens another terminal inside the test desktop.
+- Press **Ctrl+C in the launching terminal** to stop the whole test.
+
+The different modifiers avoid the main session's Ctrl+Alt cube binding. If your
+host uses Alt+Shift bindings too, edit the generated test config shown at startup.
+Use `--size 480x270` for smaller windows, `--prefix /path/to/wayfire` for another
+installation, or `--build-dir /path/to/meson-build` to test an uninstalled build.
+`--software` selects software GLES when hardware nesting is unavailable.
+
+For the automated check (requires `foot`, `swaybg`, `grim`, and Pillow):
+
+```bash
+python3 tools/three-monitor-demo.py --smoke
+```
+
+It compares the three cube screenshots, tests controls from a follower monitor,
+workspace synchronization, reopening from a non-origin monitor, and removing a
+monitor while the cube is active. Screenshots and logs remain in the printed
+`/tmp/v-kube-three-monitors-*` directory. `--backend headless` is available for
+CI, but the custom installed wlroots software/headless path can crash independently
+of this plugin; the nested Wayland backend is the verified test path here.
+
+### Record the three simulated monitors as one panoramic video
+
+Inside a terminal **in the simulation**, run:
+
+```bash
+python3 /path/to/wayfire-v-kube/tools/record-panorama.py panorama.mp4 --audio
+```
+
+The helper receives **complete panoramic frames directly from the cube plugin**
+and feeds one FFmpeg encoder. All monitor slices belong to the same controller
+frame; there are no independently timed clips and no post-recording stitching.
+Restart the simulation after updating the plugin, then run the command above.
+Activate the cube and press Ctrl+K. Recording starts with the first cube frame;
+Ctrl+C finishes the file. Closing the cube holds the last image until you reopen
+it or stop recording.
+
+Omit `--audio` for silent video. With `--audio`, desktop sound comes from the
+default audio output's monitor, in the same encoder. Use `--fps 60` for 60 fps or
+`--seconds 20` to stop after 20 seconds of video. Three 640×360 simulated outputs
+produce one 1920×360 video, in their actual output layout. Capture uses logical
+output resolution and is intended for the horizontal, unrotated simulation.
+Resizing the layout requires a new recording. Late frames repeat the **whole**
+previous panorama, so one monitor never advances independently in the video.
+
+Requires the updated cube plugin, Wayfire IPC and `ffmpeg` (`pactl` for audio).
+Native framebuffer readback adds GPU/CPU work; lower the simulation resolution
+or recording FPS if necessary. Capture buffers are allocated only while recording.
+
+For a single output, use `wf-recorder -o WL-1 -f myvid.mkv -a`: the filename
+requires `-f`, otherwise wf-recorder uses its default recording filename.

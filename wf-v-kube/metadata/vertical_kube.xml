@@ -13,6 +13,11 @@
 				<_long>Activates the cube with the specified button.</_long>
 				<default>&lt;ctrl&gt; &lt;alt&gt; BTN_LEFT</default>
 			</option>
+			<option name="toggle_panorama" type="activator">
+				<_short>Toggle panoramic cube</_short>
+				<_long>While the mirrored cube is open, smoothly join the monitors into one panoramic view. Each face shows the monitors' desktops side by side. Requires matching workspace grids.</_long>
+				<default>&lt;ctrl&gt; KEY_K</default>
+			</option>
 			<option name="rotate_left" type="activator">
 				<_short>Rotate left</_short>
 				<_long>Rotates left with the specified activator.</_long>
@@ -35,6 +40,11 @@
 			</option>
 		</group>
 		<!-- Effects -->
+		<option name="mirror_outputs" type="bool">
+			<_short>Mirror cube on all monitors</_short>
+			<_long>Show the activating monitor's cube on every monitor with shared controls. On exit, select the same workspace on each monitor, clamped to its workspace grid. Disable for independent per-monitor cubes.</_long>
+			<default>true</default>
+		</option>
 		<option name="deform" type="int">
 			<_short>Deformation</_short>
 			<_long>Specifies the deformation to be used.</_long>
