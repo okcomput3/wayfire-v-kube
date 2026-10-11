@@ -65,6 +65,11 @@ uniform mat4 VP;
 uniform mat4 model;
 uniform int deform;
 uniform float ease;
+uniform bool cap_bump_3d;
+uniform mediump float time;
+uniform float cap_height;
+uniform mediump float cap_apothem;
+uniform mediump float u_num_sides;
 
 varying mediump vec2 uvpos;
 varying mediump vec3 worldPos;
@@ -76,6 +81,18 @@ void main() {
         float d = max(length(worldPosition.xz), 0.000001);
         float factor = deform == 1 ? 0.5 / d : d / 0.5;
         worldPosition.xz *= pow(factor, ease);
+    }
+    if (cap_bump_3d) {
+        // Pin the perimeter to the side walls, including while flattening.
+        float edge = cap_apothem;
+        for (int i = 0; i < 64; ++i) {
+            if (float(i) >= u_num_sides) break;
+            float angle = float(i) * 6.28318530718 / u_num_sides;
+            edge = min(edge, cap_apothem - dot(position, vec2(sin(angle), cos(angle))));
+        }
+        float wave = sin(length(uvPosition - vec2(0.5)) * 80.0 - time * 1.8);
+        worldPosition.y += cap_height * (0.5 + 0.5 * wave) *
+            smoothstep(0.0, 0.08, edge) * ease;
     }
     worldPos = worldPosition.xyz;
     gl_Position = VP * worldPosition;
@@ -153,6 +170,11 @@ varying mediump vec2 uvpos;
 varying mediump vec3 worldPos;
 uniform sampler2D smp;
 uniform float cap_alpha;
+uniform bool cap_bump_mapping;
+uniform bool cap_picture;
+uniform bool cap_picture_underlay;
+uniform float cap_picture_rotation;
+uniform vec4 cap_base_color;
 uniform bool depth_only;
 uniform bool translucent_only;
 uniform float time;
@@ -206,6 +228,9 @@ float capEdgeCoverage() {
 }
 
 void main() {
+    float brightness = 1.0;
+    if (cap_bump_mapping)
+    {
     // Calculate distance from center using UV coordinates
     vec2 centerUV = uvpos - vec2(0.5, 0.5);
     float dist = length(centerUV) * 2.0;
@@ -246,10 +271,23 @@ void main() {
     vec3 lightDir = normalize(vec3(0.3, sin(time * 0.2), 0.5));
     
     // Calculate lighting
-    float brightness = clamp(exp(dot(normal, lightDir)) * 0.5, 0.0, 1.0);
+    brightness = clamp(exp(dot(normal, lightDir)) * 0.5, 0.0, 1.0);
+    }
     
     // Get base color from texture
-    vec4 texColor = texture2D(smp, uvpos);
+    vec2 pictureUV = uvpos;
+    if (cap_picture) {
+        float c = cos(cap_picture_rotation), s = sin(cap_picture_rotation);
+        pictureUV = mat2(c, -s, s, c) * (uvpos - vec2(0.5)) + vec2(0.5);
+    }
+    vec4 texColor = texture2D(smp, pictureUV);
+    if (cap_picture && cap_picture_underlay) {
+        // Picture transparency reveals the cap material, not a hole in its mesh.
+        float combinedAlpha = texColor.a + cap_base_color.a * (1.0 - texColor.a);
+        vec3 combinedRGB = texColor.rgb * texColor.a +
+            cap_base_color.rgb * cap_base_color.a * (1.0 - texColor.a);
+        texColor = vec4(combinedRGB / max(combinedAlpha, 0.00001), combinedAlpha);
+    }
     
     // Apply lighting
     vec3 finalColor = texColor.rgb * brightness;
@@ -403,6 +441,8 @@ class cube_render_instance_t : public wf::scene::render_instance_t
         std::vector<wf::auxilliary_buffer_t> framebuffers;
 
         popout_compositor_t popout_compositor;
+        std::vector<popout_window_layer_t> window_layers, panorama_layers;
+        size_t used_window_layers = 0;
 
         // Framebuffers for window-only cubes
         std::vector<wf::auxilliary_buffer_t> framebuffers_windows;
@@ -612,6 +652,7 @@ void schedule_instructions(
     {
         popout_compositor.begin_frame(self->cube->output);
     }
+    used_window_layers = 0;
 
     const auto bbox = destination->get_layout_geometry();
     // Capture our damage before subtracting our coverage for nodes below us.
@@ -669,7 +710,10 @@ for (int i = 0; self->cube->popout_active && i < (int)ws_instance_managers_windo
 
     auto& instances = ws_instance_managers_windows[i]->get_instances();
     
-    popout_compositor.render(instances, fb_target, framebuffers[i], self->cube->output);
+    if (self->cube->per_window_depth)
+        popout_compositor.render_separate(fb_target, framebuffers[i], self->cube->output,
+            i, 0, window_layers, used_window_layers);
+    else popout_compositor.render(instances, fb_target, framebuffers[i], self->cube->output);
     ws_damage_windows[i].clear();
 }
 
@@ -722,10 +766,14 @@ for (int row = 0; self->cube->popout_active && row < (int)ws_instance_managers_w
 
         auto& instances = ws_instance_managers_windows_rows[row][i]->get_instances();
         
-        popout_compositor.render(instances, fb_target, framebuffers_rows[row][i], self->cube->output);
+        if (self->cube->per_window_depth)
+            popout_compositor.render_separate(fb_target, framebuffers_rows[row][i], self->cube->output,
+                i, row + 1, window_layers, used_window_layers);
+        else popout_compositor.render(instances, fb_target, framebuffers_rows[row][i], self->cube->output);
         ws_damage_windows_rows[row][i].clear();
     }
 }
+    window_layers.resize(used_window_layers);
     if (!capture_only && (self->cube->panorama_amount > 0 || self->cube->panorama_animation.end > 0))
     {
         if (panorama_captures.empty())
@@ -802,25 +850,61 @@ void render(const wf::scene::render_instruction_t& data) override
                     }
                 }
             };
+            size_t used_layers = 0;
+            if (cube->per_window_depth && cube->popout_active)
+                for (size_t column = 0; column < sources.size(); ++column)
+                {
+                    cube_render_instance_t *capture = this;
+                    for (auto& candidate : panorama_captures)
+                        if (candidate->self->cube == sources[column]) capture = candidate.get();
+                    for (auto& layer : capture->window_layers)
+                    {
+                        if (used_layers == panorama_layers.size()) panorama_layers.emplace_back();
+                        auto& combined = panorama_layers[used_layers++];
+                        combined.face = layer.face; combined.row = layer.row; combined.rank = layer.rank;
+                        auto size = framebuffers[0].get_size();
+                        GLint limit = 0; GL_CALL(glGetIntegerv(GL_MAX_TEXTURE_SIZE, &limit));
+                        int width = std::max(1, std::min(size.width, limit / int(sources.size())));
+                        combined.buffer.allocate({width * int(sources.size()), size.height});
+                        wf::render_target_t target{combined.buffer};
+                        target.geometry = {}; target.geometry.width = width * sources.size();
+                        target.geometry.height = size.height;
+                        wf::gles::bind_render_buffer(target);
+                        GL_CALL(glDisable(GL_DEPTH_TEST));
+                        GL_CALL(glDisable(GL_SCISSOR_TEST));
+                        OpenGL::clear({0,0,0,0});
+                        auto copy = [&] (wf::geometry_t box, float opacity)
+                        {
+                            OpenGL::render_texture(wf::gles_texture_t::from_aux(layer.buffer), target,
+                                box, glm::vec4(opacity), OpenGL::RENDER_FLAG_CACHED);
+                            GL_CALL(glBlendFunc(GL_ONE, GL_ONE));
+                            OpenGL::draw_cached(); OpenGL::clear_cached();
+                        };
+                        if (capture == this) copy(target.geometry, 1.0f - amount);
+                        auto tile = target.geometry; tile.x = column * width; tile.width = width;
+                        copy(tile, amount);
+                    }
+                }
+            panorama_layers.resize(used_layers);
             combine(panorama_faces, framebuffers, 0, false);
             panorama_rows.resize(framebuffers_rows.size());
             panorama_window_rows.resize(framebuffers_windows_rows.size());
             for (size_t row = 0; row < framebuffers_rows.size(); ++row)
                 combine(panorama_rows[row], framebuffers_rows[row], row + 1, false);
-            if (cube->popout_active)
+            if (cube->popout_active && !cube->per_window_depth)
             {
                 combine(panorama_windows, framebuffers_windows, 0, true);
                 for (size_t row = 0; row < framebuffers_windows_rows.size(); ++row)
                     combine(panorama_window_rows[row], framebuffers_windows_rows[row], row + 1, true);
             }
         });
-        cube->render(data, panorama_faces, panorama_rows, panorama_windows, panorama_window_rows);
+        cube->render(data, panorama_faces, panorama_rows, panorama_windows, panorama_window_rows, panorama_layers);
         cube->capture_recording_slice(data, destination);
         cube->finish_output_frame(destination);
         return;
     }
     self->cube->render(data, framebuffers, framebuffers_rows,
-                      framebuffers_windows, framebuffers_windows_rows);
+                      framebuffers_windows, framebuffers_windows_rows, window_layers);
     cube->capture_recording_slice(data, destination);
     cube->finish_output_frame(destination);
 }
@@ -950,6 +1034,8 @@ private:
     bool final_exit_frame = false;
     bool depth_buffer_requested = false;
     scroll_momentum_t scroll_momentum;
+    wf::option_wrapper_t<bool> per_window_depth{"vertical_kube/per_window_depth"};
+    wf::option_wrapper_t<double> window_depth_spacing{"vertical_kube/window_depth_spacing"};
     wf::option_wrapper_t<bool> enable_window_popout{"vertical_kube/enable_window_popout"};
     wf::option_wrapper_t<double> popout_scale{"vertical_kube/popout_scale"};  // e.g., 1.15 = 15% larger
     wf::option_wrapper_t<double> popout_opacity{"vertical_kube/popout_opacity"};  // 0.0 to 1.0
@@ -958,6 +1044,11 @@ private:
     std::vector<GLfloat> cap_vertices, cap_uvs;
     OpenGL::program_t cap_program;  // Separate program for caps
     wf::option_wrapper_t<bool> enable_caps{"vertical_kube/enable_caps"};
+    wf::option_wrapper_t<bool> cap_picture_underlay{"vertical_kube/cap_picture_underlay"};
+    wf::option_wrapper_t<double> cap_rotation_top{"vertical_kube/cap_rotation_top"};
+    wf::option_wrapper_t<double> cap_rotation_bottom{"vertical_kube/cap_rotation_bottom"};
+    wf::option_wrapper_t<bool> cap_bump_3d{"vertical_kube/cap_bump_3d"};
+    wf::option_wrapper_t<bool> cap_bump_mapping{"vertical_kube/cap_bump_mapping"};
     wf::option_wrapper_t<double> cap_alpha{"vertical_kube/cap_alpha"};
     wf::option_wrapper_t<wf::color_t> cap_color_top{"vertical_kube/cap_color_top"};
     wf::option_wrapper_t<wf::color_t> cap_color_bottom{"vertical_kube/cap_color_bottom"};
@@ -972,6 +1063,7 @@ private:
     std::optional<wf::color_t> last_top_cap_color, last_bottom_cap_color;
     
     // Loaded cap texture images
+    std::string loaded_top_cap_path, loaded_bottom_cap_path;
     GLuint top_cap_texture_id = 0;
     GLuint bottom_cap_texture_id = 0;
 
@@ -1811,12 +1903,44 @@ void render_cap(bool is_top, float vertical_offset, const wf::render_target_t& t
         cap_program.attrib_pointer("position", 2, 0, piece_vertices.data());
         cap_program.attrib_pointer("uvPosition", 2, 0, piece_uvs.data());
     }
+    std::vector<GLfloat> relief_vertices, relief_uvs;
+    if (cap_bump_3d)
+    {
+        const auto& vertices = polygon.empty() ? cap_vertices : piece_vertices;
+        const auto& uvs = polygon.empty() ? cap_uvs : piece_uvs;
+        const int steps = cap_segments() > 1 ? 12 : 32;
+        auto at = [] (const auto& values, int index) { return glm::vec2(values[2*index], values[2*index+1]); };
+        for (size_t triangle = 1; triangle + 1 < vertices.size() / 2; ++triangle)
+        {
+            auto a = at(vertices, 0), b = at(vertices, triangle), c = at(vertices, triangle + 1);
+            auto ta = at(uvs, 0), tb = at(uvs, triangle), tc = at(uvs, triangle + 1);
+            auto emit = [&] (int x, int y)
+            {
+                float u = float(x) / steps, v = float(y) / steps;
+                auto point = a + u * (b-a) + v * (c-a);
+                auto uv = ta + u * (tb-ta) + v * (tc-ta);
+                relief_vertices.insert(relief_vertices.end(), {point.x, point.y});
+                relief_uvs.insert(relief_uvs.end(), {uv.x, uv.y});
+            };
+            for (int x = 0; x < steps; ++x)
+                for (int y = 0; y < steps-x; ++y)
+                {
+                    emit(x,y); emit(x+1,y); emit(x,y+1);
+                    if (x+y+1 < steps) { emit(x+1,y); emit(x+1,y+1); emit(x,y+1); }
+                }
+        }
+        cap_program.attrib_pointer("position", 2, 0, relief_vertices.data());
+        cap_program.attrib_pointer("uvPosition", 2, 0, relief_uvs.data());
+    }
+    cap_program.uniform1i("cap_bump_3d", cap_bump_3d);
+    cap_program.uniform1f("cap_height", is_top ? -0.025f : 0.025f);
     cap_program.uniform1f("cap_alpha", opacity);
+    cap_program.uniform1i("cap_bump_mapping", cap_bump_mapping);
     cap_program.uniform1i("depth_only", depth_only);
     cap_program.uniform1i("translucent_only", translucent_only);
     cap_program.uniform1i("deform", tessellation_support ? int(use_deform) : 0);
     cap_program.uniform1f("ease", animation.frame_ease);
-    
+
     cap_program.uniform1f("time", animation.frame_time);
     set_lighting(cap_program, vertical_offset + (is_top ? -0.5f : 0.5f));
 
@@ -1825,12 +1949,22 @@ void render_cap(bool is_top, float vertical_offset, const wf::render_target_t& t
     cap_program.uniform1f("cap_uv_radius", std::hypot(identity_z_offset, 0.5f));
     
     auto& buffer = is_top ? top_cap_buffer : bottom_cap_buffer;
-    auto tex_id = wf::gles_texture_t::from_aux(buffer).tex_id;
+    auto picture = is_top ? top_cap_texture_id : bottom_cap_texture_id;
+    auto tex_id = picture ? picture : wf::gles_texture_t::from_aux(buffer).tex_id;
+    const wf::color_t base = is_top ? wf::color_t(cap_color_top) : wf::color_t(cap_color_bottom);
+    cap_program.uniform1i("cap_picture", picture != 0);
+    cap_program.uniform1i("cap_picture_underlay", cap_picture_underlay);
+    cap_program.uniform1f("cap_picture_rotation",
+        float(is_top ? double(cap_rotation_top) : double(cap_rotation_bottom)) * float(M_PI / 180.0));
+    cap_program.uniform4f("cap_base_color", {base.r, base.g, base.b, base.a});
+    GL_CALL(glActiveTexture(GL_TEXTURE0));
+    cap_program.uniform1i("smp", 0);
     GL_CALL(glBindTexture(GL_TEXTURE_2D, tex_id));
     
     GL_CALL(glDisable(GL_CULL_FACE));
-    GL_CALL(glDrawArrays(GL_TRIANGLE_FAN, 0,
-        polygon.empty() ? cap_vertices.size() / 2 : piece_vertices.size() / 2));
+    GL_CALL(glDrawArrays(cap_bump_3d ? GL_TRIANGLES : GL_TRIANGLE_FAN, 0,
+        cap_bump_3d ? relief_vertices.size() / 2 :
+        (polygon.empty() ? cap_vertices.size() / 2 : piece_vertices.size() / 2)));
     
     cap_program.deactivate();
 }
@@ -1844,6 +1978,33 @@ void render_cap_textures()
     {
         return;
     }
+
+    auto load_picture = [] (std::string path, std::string& loaded, GLuint& texture)
+    {
+        if (path == loaded) return;
+        loaded = path;
+        if (texture) { GL_CALL(glDeleteTextures(1, &texture)); }
+        texture = 0;
+        if (path.empty()) return;
+        if (path.compare(0, 2, "~/") == 0 && getenv("HOME"))
+            path = std::string(getenv("HOME")) + path.substr(1);
+        GL_CALL(glActiveTexture(GL_TEXTURE0));
+        GL_CALL(glGenTextures(1, &texture));
+        GL_CALL(glBindTexture(GL_TEXTURE_2D, texture));
+        if (!image_io::load_from_file(path, GL_TEXTURE_2D))
+        {
+            LOGE("vertical_kube: failed to load cap picture: ", path);
+            GL_CALL(glDeleteTextures(1, &texture));
+            texture = 0;
+            return;
+        }
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+        GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+    };
+    load_picture(cap_texture_top, loaded_top_cap_path, top_cap_texture_id);
+    load_picture(cap_texture_bottom, loaded_bottom_cap_path, bottom_cap_texture_id);
 
     auto update = [] (wf::auxilliary_buffer_t& buffer, std::optional<wf::color_t>& previous,
         const wf::color_t& color)
@@ -1882,7 +2043,8 @@ void render_cap_textures()
                 std::vector<wf::auxilliary_buffer_t>& buffers, 
                 std::vector<std::vector<wf::auxilliary_buffer_t>>& buffers_rows,
                 std::vector<wf::auxilliary_buffer_t>& buffers_windows,
-                std::vector<std::vector<wf::auxilliary_buffer_t>>& buffers_windows_rows)
+                std::vector<std::vector<wf::auxilliary_buffer_t>>& buffers_windows_rows,
+                std::vector<popout_window_layer_t>& separate_windows)
     {
         data.pass->custom_gles_subpass([&]
         {
@@ -1997,7 +2159,7 @@ void render_cap_textures()
                 float y = -row * CUBE_VERTICAL_SPACING;
                 add_faces(row ? buffers_rows[row - 1] : buffers, y, 1.0f,
                     face_opacity, desktop_blur, false);
-                if (popout_active)
+                if (popout_active && !per_window_depth)
                     add_faces(row ? buffers_windows_rows[row - 1] : buffers_windows,
                         y, frame_popout_scale, window_opacity, false, true);
                 if (enable_caps)
@@ -2008,6 +2170,24 @@ void render_cap_textures()
                             depth_at(glm::vec4(0, cap_y, 0, 1)), true, top, bool(cap_blur), false});
                     }
             }
+            if (popout_active && per_window_depth)
+                for (auto& layer : separate_windows)
+                {
+                    const int face = (layer.face - cws.x + get_num_faces()) % get_num_faces();
+                    const float y = -layer.row * CUBE_VERTICAL_SPACING;
+                    const float scale = frame_popout_scale + (frame_popout_scale - 1.0f) *
+                        float(window_depth_spacing) * layer.rank;
+                    auto center = calculate_model_matrix(face, y, scale) * glm::vec4(0, 0, 0, 1);
+                    if (tessellation_support && int(use_deform) > 0)
+                    {
+                        float d = std::max(glm::length(glm::vec2(center.x, center.z)), 1e-6f);
+                        float factor = int(use_deform) == 1 ? 0.5f * scale / d : d / (0.5f * scale);
+                        factor = std::pow(factor, animation.frame_ease);
+                        center.x *= factor; center.z *= factor;
+                    }
+                    surfaces.push_back({&layer.buffer, face, y, scale, window_opacity,
+                        depth_at(center), false, false, false, true});
+                }
             // Recover the eye in cube coordinates, including row-centered zoom.
             const auto homogeneous_eye = glm::inverse(vp) * glm::vec4(0, 0, 1, 0);
             const float eye_y = homogeneous_eye.y / homogeneous_eye.w;

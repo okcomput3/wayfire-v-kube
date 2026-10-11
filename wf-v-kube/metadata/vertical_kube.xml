@@ -86,6 +86,16 @@
 				<max>2.0</max>
 				<precision>0.01</precision>
 			</option>
+            <option name="per_window_depth" type="bool">
+                <_short>Separate depth for each window</_short>
+                <_long>Pop out each window at its own depth, preserving stacking order. Uses additional rendering and GPU memory.</_long>
+                <default>false</default>
+            </option>
+            <option name="window_depth_spacing" type="double">
+                <_short>Window depth spacing</_short>
+                <_long>Extra separation per window, relative to the normal popout distance.</_long>
+                <default>0.25</default><min>0.0</min><max>1.0</max><precision>0.05</precision>
+            </option>
 			<option name="popout_opacity" type="double">
 				<_short>Popout opacity</_short>
 				<_long>Sets the opacity of the window popout cube. 1.0 = fully opaque, 0.5 = semi-transparent.</_long>
@@ -138,6 +148,37 @@
 				<_long>Enables rendering of top and bottom caps on the cube. Caps are N-sided polygons matching the number of workspace faces.</_long>
 				<default>true</default>
 			</option>
+            <option name="cap_picture_underlay" type="bool">
+                <_short>Cap colour underneath pictures</_short>
+                <_long>Fill transparent picture areas with the top or bottom cap colour. Disable to preserve the picture's own transparency.</_long>
+                <default>false</default>
+            </option>
+            <option name="cap_rotation_top" type="double">
+                <_short>Top cap picture rotation</_short>
+                <_long>Rotate only the top cap picture around its centre, in degrees.</_long>
+                <default>0.0</default>
+                <min>-180.0</min>
+                <max>180.0</max>
+                <precision>1.0</precision>
+            </option>
+            <option name="cap_rotation_bottom" type="double">
+                <_short>Bottom cap picture rotation</_short>
+                <_long>Rotate only the bottom cap picture around its centre, in degrees.</_long>
+                <default>0.0</default>
+                <min>-180.0</min>
+                <max>180.0</max>
+                <precision>1.0</precision>
+            </option>
+            <option name="cap_bump_3d" type="bool">
+                <_short>3D cap ripples</_short>
+                <_long>Displace the cap mesh into real 3D ripples, including cap pictures. Adds geometry and rendering cost; edges remain attached to the cube.</_long>
+                <default>false</default>
+            </option>
+            <option name="cap_bump_mapping" type="bool">
+                <_short>Cap bump mapping</_short>
+                <_long>Animate raised ripple lighting on the cube caps. Disable for a smooth cap surface.</_long>
+                <default>true</default>
+            </option>
 			<option name="cap_alpha" type="double">
 				<_short>Cap transparency</_short>
 				<_long>Sets the transparency of the cube caps. 1.0 = fully opaque, 0.0 = fully transparent.</_long>

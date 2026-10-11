@@ -299,3 +299,28 @@ or recording FPS if necessary. Capture buffers are allocated only while recordin
 
 For a single output, use `wf-recorder -o WL-1 -f myvid.mkv -a`: the filename
 requires `-f`, otherwise wf-recorder uses its default recording filename.
+
+Cap ripple bump mapping is enabled by default. Set `cap_bump_mapping = false`
+in `[vertical_kube]`, or turn off **Cap bump mapping** in WCM, for smooth caps.
+Cap transparency, blur and dynamic lighting keep their existing settings.
+
+Set `cap_texture_top` and `cap_texture_bottom` to picture paths (PNG/JPEG), or
+choose **Top cap texture** / **Bottom cap texture** in WCM. Empty or invalid paths
+fall back to the cap color. Picture transparency is preserved by default. Enable **Cap colour underneath
+pictures** (`cap_picture_underlay = true`) to fill transparent areas with the
+top/bottom cap colour instead. Pictures receive the same optional ripple lighting.
+Enable **3D cap ripples** (`cap_bump_3d = true`, default false) for real mesh
+relief on either pictures or plain caps. This adds rendering cost; the perimeter
+stays attached and relief flattens on return to the desktop. The relief follows
+the animated ripple pattern, not the brightness of the chosen picture.
+
+Rotate cap pictures independently with `cap_rotation_top` and
+`cap_rotation_bottom` (degrees, -180 to 180; default 0). These rotate only the
+picture; the cap outline and ripple pattern stay fixed.
+
+Enable **Separate depth for each window** (`per_window_depth = true`) to give
+individual windows their own popout layers. Front windows sit farther out;
+**Window depth spacing** (`window_depth_spacing = 0.25` by default) controls
+additional separation relative to the normal popout distance. Depth smoothly
+returns to zero on closing. The option is off by default and uses extra GPU
+memory/rendering work. It works with panoramic faces and the native window blur.
