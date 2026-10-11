@@ -22,6 +22,8 @@
 #include "shader-background.hpp"
 #include "image-background.hpp"
 #include "popout-compositor.hpp"
+#include "obj-renderer.hpp"
+#include "obj-source.hpp"
 #include "scroll-momentum.hpp"
 #include "glass-opacity.hpp"
 #include "surface-order.hpp"
@@ -1032,6 +1034,19 @@ private:
     std::vector<wayfire_cube*> mirrors;
     bool opening_frame_pending = false;
     bool final_exit_frame = false;
+    cube_obj_renderer_t object_renderer;
+    cube_obj_source_t object_source;
+    wf::option_wrapper_t<bool> object_animation{"vertical_kube/object_animation"};
+    wf::option_wrapper_t<int> object_animation_clip{"vertical_kube/object_animation_clip"};
+    wf::option_wrapper_t<double> object_animation_speed{"vertical_kube/object_animation_speed"};
+    wf::option_wrapper_t<bool> object_enabled{"vertical_kube/object_enabled"};
+    wf::option_wrapper_t<std::string> object_path{"vertical_kube/object_path"};
+    wf::option_wrapper_t<double> object_scale{"vertical_kube/object_scale"};
+    wf::option_wrapper_t<double> object_position_x{"vertical_kube/object_position_x"};
+    wf::option_wrapper_t<double> object_position_y{"vertical_kube/object_position_y"};
+    wf::option_wrapper_t<double> object_position_z{"vertical_kube/object_position_z"};
+    wf::option_wrapper_t<double> object_rotation{"vertical_kube/object_rotation"};
+    wf::option_wrapper_t<bool> object_flip_vertical{"vertical_kube/object_flip_vertical"};
     bool depth_buffer_requested = false;
     scroll_momentum_t scroll_momentum;
     wf::option_wrapper_t<bool> per_window_depth{"vertical_kube/per_window_depth"};
@@ -1416,7 +1431,10 @@ void load_program()
 
         wf::get_core().connect(&on_motion_event);
         wf::get_core().connect(&on_button_event);
+        wf::get_core().connect(&on_axis_event);
 
+        if (object_enabled) object_source.resolve(object_path, true);
+        object_renderer.restart_animation();
         scroll_momentum.reset();
         // Start from the current desktop, not workspace (0, 0).
         popout_active = interactive && enable_window_popout;
@@ -1533,6 +1551,7 @@ void deactivate()
     wf::get_core().unhide_cursor();
     on_motion_event.disconnect();
     on_button_event.disconnect();
+    on_axis_event.disconnect();
 
     /* Figure out how much we have rotated and switch workspace */
     int size = get_num_faces();
@@ -2095,6 +2114,29 @@ void render_cap_textures()
             const bool first_opening_frame = prepare_opening_frame();
             const float frame_popout_scale = first_opening_frame ? 1.0f : frame_popout;
             auto vp = calculate_vp_matrix(data.target);
+            object_renderer.load(object_enabled ? object_source.resolve(object_path) : "");
+            object_renderer.animate(animation.frame_time, object_animation,
+                object_animation_clip, object_animation_speed);
+            // Opaque geometry establishes both color and depth before glass surfaces.
+            // Front glass can then blend/blur the model; rear glass fails its depth test.
+            const float object_size = float(object_scale) * animation.frame_ease;
+            if (object_enabled && object_size > 0.0001f)
+                for (int row = 0; row <= int(buffers_rows.size()); ++row)
+                {
+                    auto model = glm::translate(glm::mat4(1),
+                        glm::vec3(0, -row * CUBE_VERTICAL_SPACING, 0));
+                    model = glm::rotate(model, animation.frame_rotation, glm::vec3(0, 1, 0));
+                    // Position belongs to the cube, independent of model size/orientation.
+                    model = glm::translate(model, animation.frame_ease * glm::vec3(
+                        float(object_position_x), float(object_position_y), float(object_position_z)));
+                    model = glm::rotate(model, glm::radians(float(object_rotation)), glm::vec3(0, 1, 0));
+                    // Turn upside-down imports upright around their local front axis.
+                    // A rotation preserves winding, material UVs and normal orientation.
+                    if (object_flip_vertical)
+                        model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 0, 1));
+                    model = glm::scale(model, glm::vec3(object_size));
+                    object_renderer.render(vp, model);
+                }
             program.use(wf::TEXTURE_TYPE_RGBA);
 
             static GLfloat vertexData[] = {
@@ -2496,7 +2538,8 @@ wf::effect_hook_t pre_hook = [=] ()
     {
         final_exit_frame = true;
         output->render->schedule_redraw();
-    } else if ((std::string)background_mode == "shader" || enable_caps || dynamic_lighting || panorama_recorder.active())
+    } else if ((std::string)background_mode == "shader" || enable_caps || dynamic_lighting || panorama_recorder.active() ||
+        (object_enabled && object_animation && object_renderer.has_animation()))
     {
         // Keep procedural backgrounds and cap animation moving while held still.
         output->render->schedule_redraw();
@@ -2510,6 +2553,17 @@ wf::effect_hook_t pre_hook = [=] ()
     {
         if (ev->event->state == WL_POINTER_BUTTON_STATE_RELEASED && !animation.in_exit)
             input_ungrabbed();
+    };
+
+    // Receive wheel/finger events even when the pointer is on a mirrored output.
+    // Consume them here so bindings and the local grab cannot apply them twice.
+    wf::signal::connection_t<wf::input_event_signal<wlr_pointer_axis_event>> on_axis_event =
+        [this] (wf::input_event_signal<wlr_pointer_axis_event> *ev)
+    {
+        if (animation.in_exit || ev->event->orientation != WL_POINTER_AXIS_VERTICAL_SCROLL)
+            return;
+        handle_pointer_axis(*ev->event);
+        ev->mode = wf::input_event_processing_mode_t::IGNORE;
     };
 
     wf::signal::connection_t<wf::input_event_signal<wlr_pointer_motion_event>> on_motion_event =
@@ -2602,6 +2656,7 @@ void pointer_scrolled(double amount)
 
         wf::gles::run_in_context_if_gles([&]
         {
+            object_renderer.release();
             glass_blur.reset();
             glass_layer.free();
             program.free_resources();

@@ -324,3 +324,96 @@ individual windows their own popout layers. Front windows sit farther out;
 additional separation relative to the normal popout distance. Depth smoothly
 returns to zero on closing. The option is off by default and uses extra GPU
 memory/rendering work. It works with panoramic faces and the native window blur.
+
+### OBJ models inside the cube
+
+The **Object inside cube** settings add a textured Wavefront `.obj` model
+inside each workspace row. Enable **Enable OBJ model**, set **OBJ model path**
+(an absolute path or `~/...`), then adjust **Object size** and **Object rotation**.
+Use the file or folder browse buttons beside **OBJ model or folder path** in WCM
+to choose a single model or a folder containing `.obj` files. Each cube
+entry randomly chooses one model, shared across monitors and retained until you
+close the cube. It avoids immediate repeats when the folder contains multiple
+models. Only the folder's direct OBJ files are considered (case-insensitive);
+subfolders are not searched. An empty folder displays no object.
+
+Enable **Flip object vertically** if your model appears upside down.
+The model is centered automatically, follows the cube rotation and smoothly
+scales in/out with activation. Reduce desktop/cap opacity to see inside; opaque
+faces correctly hide it. The same object appears in mirrored and panoramic views.
+
+For a quick test, use this repository's `examples/cube-object.obj`.
+
+```ini
+[vertical_kube]
+object_enabled = true
+object_path = /absolute/path/to/model.obj
+object_scale = 0.6
+object_rotation = 0
+```
+
+The importer supports triangle faces, convex polygons, positive/negative indices,
+and supplied normals (or generated face normals). Export concave polygons as
+triangles. Material libraries (`mtllib`/`usemtl`) load automatically. Keep the `.obj`, `.mtl`,
+and texture folders together: MTL paths resolve relative to the OBJ, and image
+paths relative to the MTL. PNG/JPEG diffuse (`map_Kd`), specular (`map_Ks`) and
+opacity (`map_d`) maps are supported, including UV scale/offset and clamp options.
+Material colors (`Ka`, `Kd`, `Ks`, `Ke`), shininess (`Ns`), opacity (`d`/`Tr`) and
+basic `illum` shading are respected. Texture alpha and opacity maps support
+cutouts; fractional opacity uses screen-door dithering to preserve cube depth
+ordering. Missing images fall back to the material color and log a warning.
+OBJ normal/bump maps, PBR extensions and reflection/refraction are not
+implemented. OBJ is static; GLB animation playback is described below. Files are limited to 64 MiB and 500,000
+triangles. Models are cached until the path changes or the option is switched off;
+toggle off and on to reload an edited file. Large models cost more GPU time.
+
+CPU parsing is isolated in `wf-v-kube/src/obj-loader.cpp` and `obj-material.cpp`, with a separate
+`obj-renderer.cpp` for GPU buffers, shading and cleanup. The loader test can run
+without Wayfire:
+
+```sh
+c++ -std=c++17 -Iwf-v-kube/src tests/test_obj_loader.cpp wf-v-kube/src/obj-loader.cpp wf-v-kube/src/obj-material.cpp -o /tmp/test-cube-obj
+/tmp/test-cube-obj
+```
+
+### GLB models
+
+The same **OBJ/GLB model or folder path** accepts binary glTF 2.0 (`.glb`).
+Random folder selection includes both OBJ and GLB files. GLB imports scene/node
+transforms, triangle meshes, normals, UV0, embedded or external PNG/JPEG base-color
+textures, material colors, emissive factors and alpha cutouts. Metallic/roughness
+factors are approximated using the existing cube object lighting, not a full PBR
+renderer. GLB's top-left texture orientation is handled automatically.
+
+Enable **Play model animation** to loop GLB clips while the cube is open.
+**Animation clip** selects a zero-based clip index; **Animation speed** controls
+playback rate. Clip names are printed in the Wayfire log. Playback restarts on
+cube entry or clip changes, and uses the shared monitor frame clock. Disable it
+to return to the rest pose. Static OBJ files are unaffected.
+
+Node translation/rotation/scale, skeletal skinning (up to eight influences) and
+morph weights are supported, with STEP, LINEAR and CUBICSPLINE interpolation.
+Quaternions use spherical interpolation for LINEAR tracks. Model normalization
+stays fixed across frames so walking does not cause automatic resizing.
+Textures are loaded once; animated vertices update once per shared frame.
+Large animated meshes require additional CPU/GPU work.
+Normal maps and metallic/roughness image maps are not applied. Draco/Meshopt/KTX2 and
+other unsupported required extensions are rejected with a log message. Export
+uncompressed triangles with PNG/JPEG textures. Texture-transform rotation and
+UV sets other than UV0 are not supported. Partial transparency uses coverage
+dithering, as with OBJ materials.
+
+Importer implementation: `wf-v-kube/src/glb-loader.cpp`, using vendored cgltf and
+stb_image (licences in `src/third-party`). Validate with
+`python3 tests/test_glb_loader.py`.
+
+The downloaded textured [Fox example](examples/animated/fox/README.md) includes
+Survey (0), Walk (1) and Run (2). Its model is by PixelMannen; rigging/animation
+by tomkranis; glTF conversion by AsoboStudio/scurest. See the included licence
+and attribution. This animates geometry, not video textures.
+
+Object size supports **0.05–10.0**. **Object position X/Y/Z** moves the model
+left/right, vertically and front/back relative to each cube row centre
+(range -10 to +10, default 0). Position rotates with the cube, independently of
+the model's own rotation, flip and size, and eases in/out with cube activation.
+Large sizes or offsets can place geometry beyond the caps and desktop faces.

@@ -1,6 +1,11 @@
 filters = shared_module('vertical_kube', 
     [
         'cube.cpp',
+        'obj-loader.cpp',
+        'glb-loader.cpp',
+        'glb-animation.cpp',
+        'obj-material.cpp',
+        'obj-renderer.cpp',
         'popout-compositor.cpp',
         'simple-background.cpp',
         'shader-background.cpp',

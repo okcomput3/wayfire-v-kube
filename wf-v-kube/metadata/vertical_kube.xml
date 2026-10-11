@@ -39,6 +39,66 @@
 				<default>none</default>
 			</option>
 		</group>
+        <group>
+            <_short>Object inside cube</_short>
+            <option name="object_enabled" type="bool">
+                <_short>Enable 3D model</_short>
+                <_long>Place a textured model inside each cube row. Transparent desktops and caps reveal it.</_long>
+                <default>false</default>
+            </option>
+            <option name="object_path" type="string">
+                <_short>OBJ/GLB model or folder path</_short>
+                <hint>file</hint>
+                <hint>directory</hint>
+                <_long>Path to an OBJ or GLB model, or a folder of models. GLB loads meshes with embedded PNG/JPEG textures, base-color materials and looping animation clips. A folder selects a random model on each cube activation, shared across monitors, without immediate repeats when possible. Only files directly inside the folder are selected. Supports positions, normals, triangles and convex polygons. Export concave polygons as triangles. MTL materials and diffuse, specular and opacity textures load automatically. Keep material and texture files with the model. Change the path to reload.</_long>
+                <default></default>
+            </option>
+            <option name="object_animation" type="bool">
+                <_short>Play model animation</_short>
+                <_long>Loop the selected GLB animation while the cube is open. Supports node transforms, skeletal skinning and morph targets. Disable to show the rest pose.</_long>
+                <default>true</default>
+            </option>
+            <option name="object_animation_clip" type="int">
+                <_short>Animation clip</_short>
+                <_long>Zero-based clip number. Clip names are printed in the Wayfire log when loading. Fox: 0 Survey, 1 Walk, 2 Run. Out-of-range values use the nearest available clip.</_long>
+                <default>0</default><min>0</min><max>1000</max>
+            </option>
+            <option name="object_animation_speed" type="double">
+                <_short>Animation speed</_short>
+                <_long>Playback multiplier. 1 is normal speed; 0.5 is half speed.</_long>
+                <default>1.0</default><min>0.05</min><max>5.0</max><precision>0.05</precision>
+            </option>
+            <option name="object_scale" type="double">
+                <_short>Object size</_short>
+                <_long>Largest model dimension in desktop-height units. Models are automatically centered.</_long>
+                <default>0.6</default><min>0.05</min><max>10.0</max><precision>0.05</precision>
+            </option>
+            <option name="object_position_x" type="double">
+                <_short>Object position X</_short>
+                <_long>Left/right offset from each cube row centre, in desktop-height units. Moves with the cube and is independent of object size and rotation.</_long>
+                <default>0.0</default><min>-10.0</min><max>10.0</max><precision>0.05</precision>
+            </option>
+            <option name="object_position_y" type="double">
+                <_short>Object position Y</_short>
+                <_long>Vertical offset from each cube row centre, in desktop-height units. Moves with the cube and is independent of object size and rotation.</_long>
+                <default>0.0</default><min>-10.0</min><max>10.0</max><precision>0.05</precision>
+            </option>
+            <option name="object_position_z" type="double">
+                <_short>Object position Z</_short>
+                <_long>Front/back offset from each cube row centre, in desktop-height units. Moves with the cube and is independent of object size and rotation.</_long>
+                <default>0.0</default><min>-10.0</min><max>10.0</max><precision>0.05</precision>
+            </option>
+            <option name="object_flip_vertical" type="bool">
+                <_short>Flip object vertically</_short>
+                <_long>Turn an upside-down model upright by rotating it 180 degrees around its local front axis. Keeps textures attached and preserves lighting.</_long>
+                <default>false</default>
+            </option>
+            <option name="object_rotation" type="double">
+                <_short>Object rotation</_short>
+                <_long>Rotate the model around its vertical axis in degrees.</_long>
+                <default>0.0</default><min>-180.0</min><max>180.0</max><precision>1.0</precision>
+            </option>
+        </group>
 		<!-- Effects -->
 		<option name="mirror_outputs" type="bool">
 			<_short>Mirror cube on all monitors</_short>
