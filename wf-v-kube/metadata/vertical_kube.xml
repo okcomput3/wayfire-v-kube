@@ -99,6 +99,91 @@
                 <default>0.0</default><min>-180.0</min><max>180.0</max><precision>1.0</precision>
             </option>
         </group>
+        <group>
+            <_short>Cinematic camera</_short>
+            <option name="cinematic_left" type="activator">
+                <_short>Cinematic sweep left</_short>
+                <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
+                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_LEFT</default>
+            </option>
+            <option name="cinematic_right" type="activator">
+                <_short>Cinematic sweep right</_short>
+                <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
+                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_RIGHT</default>
+            </option>
+            <option name="cinematic_up" type="activator">
+                <_short>Cinematic sweep up</_short>
+                <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
+                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_UP</default>
+            </option>
+            <option name="cinematic_down" type="activator">
+                <_short>Cinematic sweep down</_short>
+                <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
+                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_DOWN</default>
+            </option>
+            <option name="cinematic_duration" type="double">
+                <_short>Camera sweep duration</_short>
+                <_long>Length of each cinematic camera move in seconds.</_long>
+                <default>2.4</default><min>0.5</min><max>10.0</max><precision>0.1</precision>
+            </option>
+            <option name="cinematic_strength" type="double">
+                <_short>Camera sweep strength</_short>
+                <_long>Amount of orbit, banking and camera pullback.</_long>
+                <default>1.0</default><min>0.1</min><max>2.0</max><precision>0.05</precision>
+            </option>
+        </group>
+        <group>
+            <_short>Cube mist</_short>
+            <option name="mist_enabled" type="bool">
+                <_short>Enable drifting mist</_short>
+                <_long>Soft animated smoke around each cube row, synchronized across monitors.</_long>
+                <default>false</default>
+            </option>
+            <option name="mist_density" type="double">
+                <_short>Mist density</_short>
+                <default>1.0</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
+            </option>
+            <option name="mist_speed" type="double">
+                <_short>Mist drift speed</_short>
+                <default>1.0</default><min>0.1</min><max>5.0</max><precision>0.1</precision>
+            </option>
+        </group>
+        <group>
+            <_short>Rotating searchlights</_short>
+            <option name="searchlights_enabled" type="bool">
+                <_short>Enable rotating searchlights</_short>
+                <_long>Colored beams sweep out from each cube row centre, changing hue. Stylized glow, with opaque surfaces blocking hidden beam sections.</_long>
+                <default>false</default>
+            </option>
+            <option name="searchlights_refraction" type="bool">
+                <_short>Refract beams through cube</_short>
+                <_long>Treat each cube row as an optical solid. Bend rays at its sides and caps, including internal reflection. Uses the deformed envelope; decorative cap relief and rounded edges are excluded.</_long>
+                <default>false</default>
+            </option>
+            <option name="searchlights_refractive_index" type="double">
+                <_short>Beam refractive index</_short>
+                <default>1.45</default><min>1.0</min><max>2.5</max><precision>0.05</precision>
+            </option>
+            <option name="searchlights_speed" type="double">
+                <_short>Rotation speed</_short>
+                <default>1.0</default><min>0.1</min><max>5.0</max>
+                <precision>0.1</precision>
+            </option>
+            <option name="searchlights_intensity" type="double">
+                <_short>Beam brightness</_short>
+                <default>1.0</default><min>0.0</min><max>3.0</max>
+                <precision>0.1</precision>
+            </option>
+            <option name="searchlights_length" type="double">
+                <_short>Beam reach</_short>
+                <default>3.0</default><min>0.5</min><max>10.0</max>
+                <precision>0.1</precision>
+            </option>
+            <option name="searchlights_count" type="int">
+                <_short>Beams per cube</_short>
+                <default>6</default><min>1</min><max>12</max>
+            </option>
+        </group>
 		<!-- Effects -->
 		<option name="mirror_outputs" type="bool">
 			<_short>Mirror cube on all monitors</_short>
@@ -146,6 +231,16 @@
 				<max>2.0</max>
 				<precision>0.01</precision>
 			</option>
+            <option name="window_thickness" type="double">
+                <_short>Window edge thickness</_short>
+                <_long>Extrude each pop-out window's border pixels inward. Zero disables. Requires GLES 3.2; per-window silhouette processing costs GPU time.</_long>
+                <default>0.0</default><min>0.0</min><max>0.15</max><precision>0.005</precision>
+            </option>
+            <option name="window_edge_cutoff" type="double">
+                <_short>Window edge alpha cutoff</_short>
+                <_long>Ignore faint shadows when locating the border. Lower for translucent decorations; higher to exclude more shadow.</_long>
+                <default>0.8</default><min>0.05</min><max>1.0</max><precision>0.05</precision>
+            </option>
             <option name="per_window_depth" type="bool">
                 <_short>Separate depth for each window</_short>
                 <_long>Pop out each window at its own depth, preserving stacking order. Uses additional rendering and GPU memory.</_long>

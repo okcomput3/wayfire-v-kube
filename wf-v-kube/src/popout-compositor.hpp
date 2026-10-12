@@ -4,7 +4,7 @@
 
 struct popout_window_layer_t
 {
-    wf::auxilliary_buffer_t buffer;
+    wf::auxilliary_buffer_t buffer, edge_pixels;
     int face = 0, row = 0, rank = 0;
 };
 
@@ -14,7 +14,7 @@ class popout_compositor_t
   public:
     ~popout_compositor_t();
     void render_separate(const wf::render_target_t& target, wf::auxilliary_buffer_t& backdrop,
-        wf::output_t *output, int face, int row, std::vector<popout_window_layer_t>& layers, size_t& used);
+        wf::output_t *output, int face, int row, std::vector<popout_window_layer_t>& layers, size_t& used, bool capture_edges = false);
     void begin_frame(wf::output_t *output);
     void render(std::vector<wf::scene::render_instance_uptr>& instances,
         const wf::render_target_t& target, wf::auxilliary_buffer_t& backdrop,

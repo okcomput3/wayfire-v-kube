@@ -417,3 +417,62 @@ left/right, vertically and front/back relative to each cube row centre
 (range -10 to +10, default 0). Position rotates with the cube, independently of
 the model's own rotation, flip and size, and eases in/out with cube activation.
 Large sizes or offsets can place geometry beyond the caps and desktop faces.
+
+### Cinematic camera
+
+While the cube is open, **Ctrl+Alt+Shift+Left/Right/Up/Down** plays a cinematic
+camera sweep: sideways orbit or vertical swoop with bank, tilt and pullback.
+Each move eases from and back to the existing view without changing workspace.
+Press a direction during a sweep to queue the next move (latest direction wins).
+Closing the cube fades out the camera offset so it still lands on the desktop.
+Mirrors and panorama use the same sampled camera pose. WCM's **Cinematic camera**
+group exposes bindings, sweep duration (default 2.4 seconds) and strength.
+
+### Rotating searchlights
+
+WCM → **Rotating searchlights** → **Enable rotating searchlights** turns on
+color-changing beams radiating from each cube row centre. Adjust **Rotation
+speed**, **Beam brightness**, **Beam reach** and **Beams per cube**. Off by default.
+Beams rotate, tilt and cycle hues using the shared frame clock, fading with cube
+activation. Opaque geometry occludes beam sections; transparent glass allows
+the stylized additive glow through. These are lightweight glowing ribbons,
+not volumetric scattering or shadow-casting lights. Implementation is isolated
+in `wf-v-kube/src/cube-searchlights.cpp` and its header.
+
+Enable **Refract beams through cube** to trace beams against each row's optical
+volume. **Beam refractive index** controls bending (1.0 is straight through;
+1.45 is the default). Rays split at side/cap boundaries, refract on exit and
+entry, and reflect internally when they cannot escape. Cylinder/star boundaries
+follow the animated desktop deformation. Two-sided desktop layouts have no
+closed volume, so their rays remain straight. Tracing is bounded to twelve
+segments per beam. The optical envelope excludes decorative cap relief and
+rounded-edge cutouts; this remains a stylized beam effect, not glass rendering
+or illumination of nearby surfaces. CPU geometry is in `searchlight-path.hpp`.
+
+### Cube mist
+
+WCM → **Cube mist** → **Enable drifting mist** adds softly animated smoke
+around each cube row. Off by default; adjust **Mist density** (0–3) and
+**Mist drift speed** (0.1–5). It follows the deformed perimeter and fades with
+cube activation, using the shared monitor clock. The effect uses 48 procedural
+billboards per row in a single draw, with no image downloads or simulation
+buffers. The camera-facing half fades out per fragment as you rotate, and mist is
+painted before desktop surfaces to keep the front content clear. Five layers
+of smoothly warped noise provide continuously drifting detail. Transparent
+glass composites over the rear mist; this is stylized smoke, not volumetric
+scattering or refraction. Implementation: `cube-mist.cpp/.hpp`.
+
+### Window edge thickness
+
+Set **Window edge thickness** above zero (try 0.02–0.04) to extrude pop-out
+windows inward into slabs. Zero disables it. Each boundary pixel supplies its
+own RGB along the entire side wall, preserving a Pixdecor marble pattern rather
+than stretching one average border colour. Rounded corners and alpha cutouts
+follow the captured pixel silhouette. **Window edge alpha cutoff** (default
+0.8) excludes faint shadows; lower it for translucent decorations.
+
+Edges are captured against transparent black before supplying the native blur
+backdrop, so wallpaper/blur is not used as the side material. This requires the
+GLES 3.2 rendering path. Thickness fades with cube activation and works with
+separate window depths. It adds per-window captures and GPU silhouette work;
+it is disabled by default. Geometry and shaders live in `window-thickness.cpp`.

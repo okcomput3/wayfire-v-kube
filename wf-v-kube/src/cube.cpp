@@ -25,6 +25,10 @@
 #include "obj-renderer.hpp"
 #include "obj-source.hpp"
 #include "scroll-momentum.hpp"
+#include "cinematic-camera.hpp"
+#include "cube-searchlights.hpp"
+#include "cube-mist.hpp"
+#include "window-thickness.hpp"
 #include "glass-opacity.hpp"
 #include "surface-order.hpp"
 #include "panorama-recorder.hpp"
@@ -712,9 +716,9 @@ for (int i = 0; self->cube->popout_active && i < (int)ws_instance_managers_windo
 
     auto& instances = ws_instance_managers_windows[i]->get_instances();
     
-    if (self->cube->per_window_depth)
+    if (self->cube->separate_window_capture())
         popout_compositor.render_separate(fb_target, framebuffers[i], self->cube->output,
-            i, 0, window_layers, used_window_layers);
+            i, 0, window_layers, used_window_layers, self->cube->thick_windows());
     else popout_compositor.render(instances, fb_target, framebuffers[i], self->cube->output);
     ws_damage_windows[i].clear();
 }
@@ -768,9 +772,9 @@ for (int row = 0; self->cube->popout_active && row < (int)ws_instance_managers_w
 
         auto& instances = ws_instance_managers_windows_rows[row][i]->get_instances();
         
-        if (self->cube->per_window_depth)
+        if (self->cube->separate_window_capture())
             popout_compositor.render_separate(fb_target, framebuffers_rows[row][i], self->cube->output,
-                i, row + 1, window_layers, used_window_layers);
+                i, row + 1, window_layers, used_window_layers, self->cube->thick_windows());
         else popout_compositor.render(instances, fb_target, framebuffers_rows[row][i], self->cube->output);
         ws_damage_windows_rows[row][i].clear();
     }
@@ -853,7 +857,7 @@ void render(const wf::scene::render_instruction_t& data) override
                 }
             };
             size_t used_layers = 0;
-            if (cube->per_window_depth && cube->popout_active)
+            if (cube->separate_window_capture() && cube->popout_active)
                 for (size_t column = 0; column < sources.size(); ++column)
                 {
                     cube_render_instance_t *capture = this;
@@ -885,6 +889,23 @@ void render(const wf::scene::render_instruction_t& data) override
                         if (capture == this) copy(target.geometry, 1.0f - amount);
                         auto tile = target.geometry; tile.x = column * width; tile.width = width;
                         copy(tile, amount);
+                        if (cube->thick_windows())
+                        {
+                            combined.edge_pixels.allocate({width*int(sources.size()),size.height});
+                            wf::render_target_t edge_target{combined.edge_pixels};
+                            edge_target.geometry=target.geometry;
+                            wf::gles::bind_render_buffer(edge_target);
+                            OpenGL::clear({0,0,0,0});
+                            auto edge_copy = [&] (wf::geometry_t box,float opacity)
+                            {
+                                OpenGL::render_texture(wf::gles_texture_t::from_aux(layer.edge_pixels),
+                                    edge_target,box,glm::vec4(opacity),OpenGL::RENDER_FLAG_CACHED);
+                                glBlendFunc(GL_ONE,GL_ONE);
+                                OpenGL::draw_cached(); OpenGL::clear_cached();
+                            };
+                            if (capture==this) edge_copy(target.geometry,1.0f-amount);
+                            edge_copy(tile,amount);
+                        } else combined.edge_pixels.free();
                     }
                 }
             panorama_layers.resize(used_layers);
@@ -893,7 +914,7 @@ void render(const wf::scene::render_instruction_t& data) override
             panorama_window_rows.resize(framebuffers_windows_rows.size());
             for (size_t row = 0; row < framebuffers_rows.size(); ++row)
                 combine(panorama_rows[row], framebuffers_rows[row], row + 1, false);
-            if (cube->popout_active && !cube->per_window_depth)
+            if (cube->popout_active && !cube->separate_window_capture())
             {
                 combine(panorama_windows, framebuffers_windows, 0, true);
                 for (size_t row = 0; row < framebuffers_windows_rows.size(); ++row)
@@ -1034,6 +1055,23 @@ private:
     std::vector<wayfire_cube*> mirrors;
     bool opening_frame_pending = false;
     bool final_exit_frame = false;
+    window_thickness_t window_sides;
+    wf::option_wrapper_t<double> window_thickness{"vertical_kube/window_thickness"};
+    wf::option_wrapper_t<double> window_edge_cutoff{"vertical_kube/window_edge_cutoff"};
+    bool thick_windows() const { return tessellation_support && float(window_thickness)>0; }
+    bool separate_window_capture() const { return per_window_depth || thick_windows(); }
+    cube_mist_t mist;
+    wf::option_wrapper_t<bool> mist_enabled{"vertical_kube/mist_enabled"};
+    wf::option_wrapper_t<double> mist_density{"vertical_kube/mist_density"};
+    wf::option_wrapper_t<double> mist_speed{"vertical_kube/mist_speed"};
+    cube_searchlights_t searchlights;
+    wf::option_wrapper_t<bool> searchlights_refraction{"vertical_kube/searchlights_refraction"};
+    wf::option_wrapper_t<double> searchlights_refractive_index{"vertical_kube/searchlights_refractive_index"};
+    wf::option_wrapper_t<bool> searchlights_enabled{"vertical_kube/searchlights_enabled"};
+    wf::option_wrapper_t<double> searchlights_speed{"vertical_kube/searchlights_speed"};
+    wf::option_wrapper_t<double> searchlights_intensity{"vertical_kube/searchlights_intensity"};
+    wf::option_wrapper_t<double> searchlights_length{"vertical_kube/searchlights_length"};
+    wf::option_wrapper_t<int> searchlights_count{"vertical_kube/searchlights_count"};
     cube_obj_renderer_t object_renderer;
     cube_obj_source_t object_source;
     wf::option_wrapper_t<bool> object_animation{"vertical_kube/object_animation"};
@@ -1049,6 +1087,32 @@ private:
     wf::option_wrapper_t<bool> object_flip_vertical{"vertical_kube/object_flip_vertical"};
     bool depth_buffer_requested = false;
     scroll_momentum_t scroll_momentum;
+    wf::option_wrapper_t<double> cinematic_duration{"vertical_kube/cinematic_duration"};
+    wf::option_wrapper_t<double> cinematic_strength{"vertical_kube/cinematic_strength"};
+    bool cinematic_active = false;
+    int cinematic_x = 0, cinematic_y = 0;
+    int cinematic_next_x = 0, cinematic_next_y = 0;
+    std::chrono::steady_clock::time_point cinematic_start;
+
+  public:
+    bool cinematic_sweep(int x, int y)
+    {
+        if (!render_node || animation.in_exit) return false;
+        if (cinematic_active)
+        {
+            // Queue a direction without snapping the camera mid-flight.
+            cinematic_next_x = x; cinematic_next_y = y;
+        } else
+        {
+            cinematic_x = x; cinematic_y = y;
+            cinematic_start = std::chrono::steady_clock::now();
+            cinematic_active = true;
+        }
+        output->render->schedule_redraw();
+        return true;
+    }
+
+  private:
     wf::option_wrapper_t<bool> per_window_depth{"vertical_kube/per_window_depth"};
     wf::option_wrapper_t<double> window_depth_spacing{"vertical_kube/window_depth_spacing"};
     wf::option_wrapper_t<bool> enable_window_popout{"vertical_kube/enable_window_popout"};
@@ -1435,6 +1499,7 @@ void load_program()
 
         if (object_enabled) object_source.resolve(object_path, true);
         object_renderer.restart_animation();
+        cinematic_active = false; cinematic_next_x = cinematic_next_y = 0;
         scroll_momentum.reset();
         // Start from the current desktop, not workspace (0, 0).
         popout_active = interactive && enable_window_popout;
@@ -1772,7 +1837,33 @@ void reset_attribs()
             glm::vec3(0., 0., -animation.frame_offset_z),
             glm::vec3(0., 1., 0.));
 
-        animation.view = zoom_translate * rotation * camera_vertical * view;
+        cube_camera_pose_t cinematic;
+        if (cinematic_active)
+        {
+            const auto now = std::chrono::steady_clock::now();
+            float progress = std::chrono::duration<float>(now - cinematic_start).count() /
+                std::max(0.1f, float(cinematic_duration));
+            if (progress >= 1)
+            {
+                cinematic_active = false;
+                if (!animation.in_exit && (cinematic_next_x || cinematic_next_y))
+                {
+                    cinematic_x = cinematic_next_x; cinematic_y = cinematic_next_y;
+                    cinematic_next_x = cinematic_next_y = 0;
+                    cinematic_start = now; cinematic_active = true; progress = 0;
+                }
+            }
+            cinematic = cube_camera_sweep(progress, cinematic_x, cinematic_y);
+        }
+        // Apply around the current row before camera distance, with roll in view space.
+        // Fade with cube closure so the desktop endpoint remains exactly flat.
+        float amount = std::clamp(animation.frame_ease, 0.0f, 1.0f) * float(cinematic_strength);
+        auto orbit = glm::rotate(glm::mat4(1), cinematic.pitch * amount, glm::vec3(1,0,0));
+        orbit = glm::rotate(orbit, cinematic.yaw * amount, glm::vec3(0,1,0));
+        auto bank = glm::rotate(glm::mat4(1), cinematic.roll * amount, glm::vec3(0,0,1));
+        auto dolly = glm::translate(glm::mat4(1), glm::vec3(0, cinematic.rise * amount,
+            -cinematic.pullback * amount));
+        animation.view = bank * dolly * zoom_translate * rotation * orbit * camera_vertical * view;
     }
 
     glm::mat4 output_transform(const wf::render_target_t& target)
@@ -2201,7 +2292,7 @@ void render_cap_textures()
                 float y = -row * CUBE_VERTICAL_SPACING;
                 add_faces(row ? buffers_rows[row - 1] : buffers, y, 1.0f,
                     face_opacity, desktop_blur, false);
-                if (popout_active && !per_window_depth)
+                if (popout_active && !separate_window_capture())
                     add_faces(row ? buffers_windows_rows[row - 1] : buffers_windows,
                         y, frame_popout_scale, window_opacity, false, true);
                 if (enable_caps)
@@ -2212,13 +2303,13 @@ void render_cap_textures()
                             depth_at(glm::vec4(0, cap_y, 0, 1)), true, top, bool(cap_blur), false});
                     }
             }
-            if (popout_active && per_window_depth)
+            if (popout_active && separate_window_capture())
                 for (auto& layer : separate_windows)
                 {
                     const int face = (layer.face - cws.x + get_num_faces()) % get_num_faces();
                     const float y = -layer.row * CUBE_VERTICAL_SPACING;
                     const float scale = frame_popout_scale + (frame_popout_scale - 1.0f) *
-                        float(window_depth_spacing) * layer.rank;
+                        (per_window_depth ? float(window_depth_spacing) : 0.0f) * layer.rank;
                     auto center = calculate_model_matrix(face, y, scale) * glm::vec4(0, 0, 0, 1);
                     if (tessellation_support && int(use_deform) > 0)
                     {
@@ -2229,6 +2320,17 @@ void render_cap_textures()
                     }
                     surfaces.push_back({&layer.buffer, face, y, scale, window_opacity,
                         depth_at(center), false, false, false, true});
+                }
+            if (popout_active && thick_windows())
+                for (auto& layer : separate_windows)
+                {
+                    int face=(layer.face-cws.x+get_num_faces())%get_num_faces();
+                    float scale=frame_popout_scale+(frame_popout_scale-1.0f)*
+                        (per_window_depth ? float(window_depth_spacing) : 0.0f)*layer.rank;
+                    window_sides.render(layer.edge_pixels,vp,
+                        calculate_model_matrix(face,-layer.row*CUBE_VERTICAL_SPACING,scale),
+                        float(window_thickness)*animation.frame_ease,float(window_edge_cutoff),
+                        window_opacity,int(use_deform),animation.frame_ease,scale);
                 }
             // Recover the eye in cube coordinates, including row-centered zoom.
             const auto homogeneous_eye = glm::inverse(vp) * glm::vec4(0, 0, 1, 0);
@@ -2370,6 +2472,13 @@ void render_cap_textures()
                 glass_blur.reset();
                 glass_layer.free();
             }
+            // Paint rear/side mist before the glass surfaces: desktop content
+            // composites over it instead of being washed out by a final overlay.
+            wf::gles::bind_render_buffer(data.target);
+            if (mist_enabled)
+                mist.render(vp, animation.view, int(buffers_rows.size()) + 1, -CUBE_VERTICAL_SPACING,
+                    get_num_faces(), tessellation_support ? int(use_deform) : 0, animation.frame_rotation,
+                    animation.frame_time, animation.frame_ease, mist_density, mist_speed);
             for (const auto& surface : surfaces)
             {
                 if (surface.opacity <= 0.0f) continue;
@@ -2427,6 +2536,12 @@ void render_cap_textures()
                     cube_damage_region_t{data.target.geometry}, data.target, data.target);
             }
             wf::gles::bind_render_buffer(data.target);
+            if (searchlights_enabled)
+                searchlights.render(vp, glm::normalize(glm::vec3(glm::inverse(animation.view) * glm::vec4(0,0,-1,0))), int(buffers_rows.size()) + 1, -CUBE_VERTICAL_SPACING,
+                    animation.frame_rotation, animation.frame_time, animation.frame_ease,
+                    searchlights_speed, searchlights_intensity, searchlights_length, searchlights_count,
+                    searchlights_refraction, searchlights_refractive_index, get_num_faces(),
+                    tessellation_support ? int(use_deform) : 0);
             GL_CALL(glDepthMask(GL_TRUE));
             GL_CALL(glDisable(GL_BLEND));
             GL_CALL(glDisable(GL_CULL_FACE));
@@ -2531,14 +2646,14 @@ wf::effect_hook_t pre_hook = [=] ()
     wf::scene::damage_node(render_node, render_node->get_bounding_box());
     for (auto peer : mirrors) peer->output->render->damage_whole();
     
-    if (animation.cube_animation.running() || camera_y_offset.running() || popout_scale_animation.running() || panorama_animation.running())
+    if ((cinematic_active && !animation.in_exit) || animation.cube_animation.running() || camera_y_offset.running() || popout_scale_animation.running() || panorama_animation.running())
     {
         output->render->schedule_redraw();
     } else if (animation.in_exit)
     {
         final_exit_frame = true;
         output->render->schedule_redraw();
-    } else if ((std::string)background_mode == "shader" || enable_caps || dynamic_lighting || panorama_recorder.active() ||
+    } else if ((std::string)background_mode == "shader" || enable_caps || dynamic_lighting || searchlights_enabled || mist_enabled || panorama_recorder.active() ||
         (object_enabled && object_animation && object_renderer.has_animation()))
     {
         // Keep procedural backgrounds and cap animation moving while held still.
@@ -2656,6 +2771,9 @@ void pointer_scrolled(double amount)
 
         wf::gles::run_in_context_if_gles([&]
         {
+            window_sides.release();
+            mist.release();
+            searchlights.release();
             object_renderer.release();
             glass_blur.reset();
             glass_layer.free();
@@ -2690,6 +2808,10 @@ class WayfireVerticalKube : public wf::plugin_interface_t,
     wf::ipc_activator_t rotate_down{"vertical_kube/rotate_down"};
     wf::ipc_activator_t activate{"vertical_kube/activate"};
     wf::ipc_activator_t panorama{"vertical_kube/toggle_panorama"};
+    wf::ipc_activator_t cinematic_left{"vertical_kube/cinematic_left"};
+    wf::ipc_activator_t cinematic_right{"vertical_kube/cinematic_right"};
+    wf::ipc_activator_t cinematic_up{"vertical_kube/cinematic_up"};
+    wf::ipc_activator_t cinematic_down{"vertical_kube/cinematic_down"};
     wf::shared_data::ref_ptr_t<wf::ipc::method_repository_t> methods;
 
   public:
@@ -2722,6 +2844,10 @@ class WayfireVerticalKube : public wf::plugin_interface_t,
         rotate_up.set_handler(rotate_up_cb);
         rotate_down.set_handler(rotate_down_cb);
         activate.set_handler(activate_cb);
+        cinematic_left.set_handler([this](wf::output_t *o, wayfire_view) { return output_instance[o]->controller()->cinematic_sweep(-1,0); });
+        cinematic_right.set_handler([this](wf::output_t *o, wayfire_view) { return output_instance[o]->controller()->cinematic_sweep(1,0); });
+        cinematic_up.set_handler([this](wf::output_t *o, wayfire_view) { return output_instance[o]->controller()->cinematic_sweep(0,-1); });
+        cinematic_down.set_handler([this](wf::output_t *o, wayfire_view) { return output_instance[o]->controller()->cinematic_sweep(0,1); });
         panorama.set_handler([this] (wf::output_t *output, wayfire_view)
         {
             return output_instance[output]->controller()->toggle_panorama();

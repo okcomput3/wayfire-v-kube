@@ -289,7 +289,7 @@ void popout_compositor_t::render(std::vector<wf::scene::render_instance_uptr>& i
 
 void popout_compositor_t::render_separate(const wf::render_target_t& target,
     wf::auxilliary_buffer_t& backdrop, wf::output_t *output, int face, int row,
-    std::vector<popout_window_layer_t>& layers, size_t& used)
+    std::vector<popout_window_layer_t>& layers, size_t& used, bool capture_edges)
 {
     auto ordered = windows;
     stacked_backdrop.allocate(wf::dimensions(target.geometry), target.scale);
@@ -321,6 +321,20 @@ void popout_compositor_t::render_separate(const wf::render_target_t& target,
         single_target.scale = target.scale;
         std::vector<wf::scene::render_instance_uptr> instances;
         entry.node->gen_render_instances(instances, [] (const damage_region_t&) {}, output);
+        if (capture_edges)
+        {
+            // Capture against transparent black BEFORE adding any blur backdrop.
+            // Native blur retains the window's actual alpha in this pass.
+            layer.edge_pixels.allocate(wf::dimensions(target.geometry),target.scale);
+            wf::render_target_t edge_target{layer.edge_pixels};
+            edge_target.geometry=target.geometry; edge_target.scale=target.scale;
+            wf::render_pass_params_t params;
+            params.instances=&instances; params.target=edge_target;
+            params.damage=target.geometry; params.background_color={0,0,0,0};
+            params.reference_output=nullptr;
+            params.flags=wf::RPASS_CLEAR_BACKGROUND | wf::RPASS_EMIT_SIGNALS;
+            wf::render_pass_t::run(params);
+        } else layer.edge_pixels.free();
         windows = {entry};
         render(instances, single_target, stacked_backdrop, output);
         wf::gles::run_in_context([&]

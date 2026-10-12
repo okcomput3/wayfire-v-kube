@@ -1,6 +1,9 @@
 filters = shared_module('vertical_kube', 
     [
         'cube.cpp',
+        'cube-searchlights.cpp',
+        'cube-mist.cpp',
+        'window-thickness.cpp',
         'obj-loader.cpp',
         'glb-loader.cpp',
         'glb-animation.cpp',
