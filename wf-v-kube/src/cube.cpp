@@ -28,6 +28,8 @@
 #include "cinematic-camera.hpp"
 #include "cube-searchlights.hpp"
 #include "cube-mist.hpp"
+#include "cosmic-accents.hpp"
+#include "accent-bloom.hpp"
 #include "window-thickness.hpp"
 #include "glass-opacity.hpp"
 #include "surface-order.hpp"
@@ -153,6 +155,7 @@ void main() {
     float dy = (hY1 - hY2) / (2.0 * delta);
     
     // Calculate normal from gradients
+    crystal_slope = vec2(dx,dy)*.035;
     vec3 normal = normalize(vec3(-dx, -dy, 1.0));
     
     // Animated light direction
@@ -177,6 +180,9 @@ varying mediump vec3 worldPos;
 uniform sampler2D smp;
 uniform float cap_alpha;
 uniform bool cap_bump_mapping;
+uniform bool cap_crystal;
+uniform float cap_crystal_strength;
+uniform vec3 crystal_view;
 uniform bool cap_picture;
 uniform bool cap_picture_underlay;
 uniform float cap_picture_rotation;
@@ -235,6 +241,7 @@ float capEdgeCoverage() {
 
 void main() {
     float brightness = 1.0;
+    vec2 crystal_slope = vec2(0.0);
     if (cap_bump_mapping)
     {
     // Calculate distance from center using UV coordinates
@@ -303,6 +310,27 @@ void main() {
     if (alpha <= 0.0 || (depth_only && alpha < 0.999)) discard;
     if (translucent_only && alpha >= 0.999) discard;
     finalColor = min(vec3(1.0), finalColor + interiorLights(worldPos));
+    if (cap_crystal) {
+        // Shallow bevel normal around the rounded polygon, plus existing relief.
+        vec2 p=(uvpos-.5)*(2.0*cap_uv_radius);
+        float sector=6.28318530718/max(u_num_sides,3.0);
+        float face=floor(atan(p.x,p.y)/sector+.5)*sector;
+        vec2 outward=vec2(sin(face),cos(face));
+        float edge=cap_apothem-dot(p,outward);
+        float bevel=1.0-smoothstep(0.0,.10,edge);
+        vec3 normal=normalize(vec3(outward.x*bevel*.7+crystal_slope.x,1.0,
+            outward.y*bevel*.7+crystal_slope.y));
+        vec3 eye=normalize(crystal_view);
+        if(dot(normal,eye)<0.0) normal=-normal;
+        float fresnel=pow(1.0-abs(dot(normal,eye)),5.0);
+        vec3 lightA=normalize(vec3(cos(time*.23),1.4,sin(time*.23)));
+        vec3 lightB=normalize(vec3(-sin(time*.17),.8,cos(time*.17)));
+        float specA=pow(max(0.0,dot(normal,normalize(lightA+eye))),90.0);
+        float specB=pow(max(0.0,dot(normal,normalize(lightB+eye))),140.0);
+        vec3 shine=vec3(.3,.72,1.0)*specA+vec3(1.0,.66,.28)*specB;
+        shine+=vec3(.3,.55,.85)*fresnel*(.08+.5*bevel);
+        finalColor += shine*cap_crystal_strength;
+    }
     gl_FragColor = vec4(finalColor * alpha, alpha);
 }
 )";
@@ -1055,11 +1083,26 @@ private:
     std::vector<wayfire_cube*> mirrors;
     bool opening_frame_pending = false;
     bool final_exit_frame = false;
+    wf::option_wrapper_t<double> desktop_thickness{"vertical_kube/desktop_thickness"};
     window_thickness_t window_sides;
     wf::option_wrapper_t<double> window_thickness{"vertical_kube/window_thickness"};
     wf::option_wrapper_t<double> window_edge_cutoff{"vertical_kube/window_edge_cutoff"};
     bool thick_windows() const { return tessellation_support && float(window_thickness)>0; }
     bool separate_window_capture() const { return per_window_depth || thick_windows(); }
+    accent_bloom_t bloom;
+    wf::option_wrapper_t<bool> bloom_enabled{"vertical_kube/bloom_enabled"};
+    wf::option_wrapper_t<double> bloom_strength{"vertical_kube/bloom_strength"};
+    wf::option_wrapper_t<double> bloom_spread{"vertical_kube/bloom_spread"};
+    wf::option_wrapper_t<double> bloom_threshold{"vertical_kube/bloom_threshold"};
+    wf::option_wrapper_t<int> bloom_quality{"vertical_kube/bloom_quality"};
+    cosmic_accents_t cosmic;
+    wf::option_wrapper_t<bool> cosmic_rims{"vertical_kube/cosmic_rims"};
+    wf::option_wrapper_t<bool> cosmic_rings{"vertical_kube/cosmic_rings"};
+    wf::option_wrapper_t<bool> cosmic_sparkles{"vertical_kube/cosmic_sparkles"};
+    wf::option_wrapper_t<double> cosmic_intensity{"vertical_kube/cosmic_intensity"};
+    wf::option_wrapper_t<double> cosmic_ring_gap{"vertical_kube/cosmic_ring_gap"};
+    wf::option_wrapper_t<double> cosmic_ring_width{"vertical_kube/cosmic_ring_width"};
+    wf::option_wrapper_t<double> cosmic_speed{"vertical_kube/cosmic_speed"};
     cube_mist_t mist;
     wf::option_wrapper_t<bool> mist_enabled{"vertical_kube/mist_enabled"};
     wf::option_wrapper_t<double> mist_density{"vertical_kube/mist_density"};
@@ -1127,6 +1170,8 @@ private:
     wf::option_wrapper_t<double> cap_rotation_top{"vertical_kube/cap_rotation_top"};
     wf::option_wrapper_t<double> cap_rotation_bottom{"vertical_kube/cap_rotation_bottom"};
     wf::option_wrapper_t<bool> cap_bump_3d{"vertical_kube/cap_bump_3d"};
+    wf::option_wrapper_t<bool> cap_crystal{"vertical_kube/cap_crystal"};
+    wf::option_wrapper_t<double> cap_crystal_strength{"vertical_kube/cap_crystal_strength"};
     wf::option_wrapper_t<bool> cap_bump_mapping{"vertical_kube/cap_bump_mapping"};
     wf::option_wrapper_t<double> cap_alpha{"vertical_kube/cap_alpha"};
     wf::option_wrapper_t<wf::color_t> cap_color_top{"vertical_kube/cap_color_top"};
@@ -1198,6 +1243,9 @@ private:
         if (last_background_mode == "shader")
         {
             background = std::make_unique<wf_cube_shader_background>();
+        } else if (last_background_mode == "alternative_shader")
+        {
+            background = std::make_unique<wf_cube_shader_background>(true);
         } else if (last_background_mode == "image")
         {
             background = std::make_unique<wf_cube_image_background>();
@@ -2046,6 +2094,10 @@ void render_cap(bool is_top, float vertical_offset, const wf::render_target_t& t
     cap_program.uniform1f("cap_height", is_top ? -0.025f : 0.025f);
     cap_program.uniform1f("cap_alpha", opacity);
     cap_program.uniform1i("cap_bump_mapping", cap_bump_mapping);
+    cap_program.uniform1i("cap_crystal",cap_crystal);
+    cap_program.uniform1f("cap_crystal_strength",float(cap_crystal_strength)*animation.frame_ease);
+    auto crystal_eye=glm::normalize(glm::vec3(glm::inverse(model)*glm::inverse(animation.view)*glm::vec4(0,0,1,0)));
+    cap_program.uniform3f("crystal_view",crystal_eye.x,crystal_eye.y,crystal_eye.z);
     cap_program.uniform1i("depth_only", depth_only);
     cap_program.uniform1i("translucent_only", translucent_only);
     cap_program.uniform1i("deform", tessellation_support ? int(use_deform) : 0);
@@ -2321,6 +2373,16 @@ void render_cap_textures()
                     surfaces.push_back({&layer.buffer, face, y, scale, window_opacity,
                         depth_at(center), false, false, false, true});
                 }
+            if (tessellation_support && float(desktop_thickness)>0)
+                for (int row=0; row<=int(buffers_rows.size()); ++row)
+                    for (int face=0; face<get_num_faces(); ++face)
+                    {
+                        auto& textures=row ? buffers_rows[row-1] : buffers;
+                        window_sides.render(textures[(cws.x+face)%get_num_faces()],vp,
+                            calculate_model_matrix(face,-row*CUBE_VERTICAL_SPACING),
+                            float(desktop_thickness)*animation.frame_ease,.5f,face_opacity,
+                            int(use_deform),animation.frame_ease,1.0f,true);
+                    }
             if (popout_active && thick_windows())
                 for (auto& layer : separate_windows)
                 {
@@ -2333,9 +2395,15 @@ void render_cap_textures()
                         window_opacity,int(use_deform),animation.frame_ease,scale);
                 }
             // Recover the eye in cube coordinates, including row-centered zoom.
-            const auto homogeneous_eye = glm::inverse(vp) * glm::vec4(0, 0, 1, 0);
-            const float eye_y = homogeneous_eye.y / homogeneous_eye.w;
-            const glm::vec3 eye = glm::vec3(homogeneous_eye) / homogeneous_eye.w;
+            // Use one camera for every panorama slice. Recovering it through
+            // each off-axis projection introduces rounding differences near
+            // coplanar BSP splits, which can change transparent surface order.
+            const auto camera = glm::inverse(animation.view) * glm::vec4(0,0,0,1);
+            glm::vec3 eye = glm::vec3(camera)/camera.w;
+            eye.y += frame_camera_y;
+            eye *= animation.frame_zoom;
+            eye.y -= frame_camera_y;
+            const float eye_y = eye.y;
             std::vector<cube_surface_bounds_t> bounds;
             const bool planar = !tessellation_support || int(use_deform) == 0 ||
                 float(animation.frame_ease) == 0.0f;
@@ -2536,12 +2604,23 @@ void render_cap_textures()
                     cube_damage_region_t{data.target.geometry}, data.target, data.target);
             }
             wf::gles::bind_render_buffer(data.target);
+            const bool bloom_active=bloom_enabled && float(bloom_strength)>0 &&
+                (cosmic_rims || cosmic_rings || cosmic_sparkles || searchlights_enabled);
+            if(bloom_active) bloom.begin(data.target);
+            else bloom.release();
+            if (cosmic_rims || cosmic_rings || cosmic_sparkles)
+                cosmic.render(vp,animation.view,int(buffers_rows.size())+1,-CUBE_VERTICAL_SPACING,
+                    get_num_faces(),tessellation_support ? int(use_deform) : 0,
+                    animation.frame_rotation,animation.frame_time,animation.frame_ease,
+                    cosmic_rims && enable_caps,cosmic_rings,cosmic_sparkles,cosmic_intensity,cosmic_speed,
+                    cosmic_ring_gap,cosmic_ring_width);
             if (searchlights_enabled)
                 searchlights.render(vp, glm::normalize(glm::vec3(glm::inverse(animation.view) * glm::vec4(0,0,-1,0))), int(buffers_rows.size()) + 1, -CUBE_VERTICAL_SPACING,
                     animation.frame_rotation, animation.frame_time, animation.frame_ease,
                     searchlights_speed, searchlights_intensity, searchlights_length, searchlights_count,
                     searchlights_refraction, searchlights_refractive_index, get_num_faces(),
                     tessellation_support ? int(use_deform) : 0);
+            if(bloom_active) bloom.finish(data.target,bloom_strength,bloom_spread,bloom_threshold,bloom_quality);
             GL_CALL(glDepthMask(GL_TRUE));
             GL_CALL(glDisable(GL_BLEND));
             GL_CALL(glDisable(GL_CULL_FACE));
@@ -2653,7 +2732,7 @@ wf::effect_hook_t pre_hook = [=] ()
     {
         final_exit_frame = true;
         output->render->schedule_redraw();
-    } else if ((std::string)background_mode == "shader" || enable_caps || dynamic_lighting || searchlights_enabled || mist_enabled || panorama_recorder.active() ||
+    } else if (((std::string)background_mode == "shader" || (std::string)background_mode == "alternative_shader") || enable_caps || dynamic_lighting || searchlights_enabled || mist_enabled || cosmic_rims || cosmic_rings || cosmic_sparkles || panorama_recorder.active() ||
         (object_enabled && object_animation && object_renderer.has_animation()))
     {
         // Keep procedural backgrounds and cap animation moving while held still.
@@ -2772,6 +2851,8 @@ void pointer_scrolled(double amount)
         wf::gles::run_in_context_if_gles([&]
         {
             window_sides.release();
+            bloom.release();
+            cosmic.release();
             mist.release();
             searchlights.release();
             object_renderer.release();

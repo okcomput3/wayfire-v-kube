@@ -1,4 +1,5 @@
 #include "shader-background.hpp"
+#include "alternative-background.tpp"
 #include <chrono>
 #include <algorithm>
 #include <cmath>
@@ -166,13 +167,13 @@ uniform sampler2D source;
 void main() { gl_FragColor = texture2D(source, v_uv); }
 )";
 
-wf_cube_shader_background::wf_cube_shader_background()
+wf_cube_shader_background::wf_cube_shader_background(bool alternative)
 {
     wf::gles::run_in_context([&]
     {
         copy_program.set_simple(OpenGL::compile_program(background_vertex_shader, background_copy_shader));
         background_program.set_simple(OpenGL::compile_program(
-            background_vertex_shader, background_fragment_shader));
+            background_vertex_shader, alternative ? alternative_fragment_shader : background_fragment_shader));
         static const GLfloat quad_vertices[] = {
             -1.0f, -1.0f,
              1.0f, -1.0f,

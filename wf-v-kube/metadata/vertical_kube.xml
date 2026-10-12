@@ -133,6 +133,64 @@
             </option>
         </group>
         <group>
+            <_short>Selective bloom</_short>
+            <option name="bloom_enabled" type="bool"><_short>Enable accent bloom</_short>
+                <_long>Glow around cosmic rims, rings, sparkles and searchlights. Desktop text is excluded from the bloom source.</_long><default>false</default></option>
+            <option name="bloom_strength" type="double"><_short>Bloom strength</_short>
+                <default>1.0</default><min>0.0</min><max>4.0</max><precision>0.1</precision></option>
+            <option name="bloom_spread" type="double"><_short>Bloom spread</_short>
+                <default>8.0</default><min>1.0</min><max>24.0</max><precision>1.0</precision></option>
+            <option name="bloom_threshold" type="double"><_short>Bloom brightness threshold</_short>
+                <default>0.15</default><min>0.0</min><max>1.0</max><precision>0.05</precision></option>
+            <option name="bloom_quality" type="int"><_short>Bloom quality</_short>
+                <default>0</default><min>0</min><max>1</max>
+                <desc><value>0</value><_name>Fast (quarter resolution)</_name></desc>
+                <desc><value>1</value><_name>High (half resolution)</_name></desc></option>
+        </group>
+        <group>
+            <_short>Cosmic accents</_short>
+            <option name="cap_crystal" type="bool">
+                <_short>Crystal cap highlights</_short>
+                <_long>Glossy cyan/gold glints and grazing-angle highlights on the cap. Preserves cap transparency; stylized lighting, not scene reflections.</_long>
+                <default>false</default>
+            </option>
+            <option name="cap_crystal_strength" type="double">
+                <_short>Crystal highlight strength</_short>
+                <default>1.0</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
+            </option>
+            <option name="cosmic_rims" type="bool">
+                <_short>Glowing cap rims</_short>
+                <_long>Cyan and gold highlights around the cap perimeter. Requires caps enabled.</_long>
+                <default>false</default>
+            </option>
+            <option name="cosmic_rings" type="bool">
+                <_short>Orbital light rings</_short>
+                <default>false</default>
+            </option>
+            <option name="cosmic_sparkles" type="bool">
+                <_short>Orbiting star sparkles</_short>
+                <default>false</default>
+            </option>
+            <option name="cosmic_intensity" type="double">
+                <_short>Accent brightness</_short>
+                <default>1.0</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
+            </option>
+            <option name="cosmic_ring_gap" type="double">
+                <_short>Ring distance from cube</_short>
+                <_long>Clearance beyond the deformed cube's outer radius. Smaller values keep the rings close to the cube.</_long>
+                <default>0.08</default><min>0.02</min><max>0.6</max><precision>0.01</precision>
+            </option>
+            <option name="cosmic_ring_width" type="double">
+                <_short>Ring trail thickness</_short>
+                <_long>Scales the tapered trail and thicker moving highlights.</_long>
+                <default>1.0</default><min>0.25</min><max>3.0</max><precision>0.05</precision>
+            </option>
+            <option name="cosmic_speed" type="double">
+                <_short>Accent animation speed</_short>
+                <default>1.0</default><min>0.1</min><max>5.0</max><precision>0.1</precision>
+            </option>
+        </group>
+        <group>
             <_short>Cube mist</_short>
             <option name="mist_enabled" type="bool">
                 <_short>Enable drifting mist</_short>
@@ -231,6 +289,11 @@
 				<max>2.0</max>
 				<precision>0.01</precision>
 			</option>
+            <option name="desktop_thickness" type="double">
+                <_short>Desktop face thickness</_short>
+                <_long>Extrude the rounded desktop perimeter inward using its edge pixels. Independent of window thickness. Zero disables. Requires GLES 3.2.</_long>
+                <default>0.0</default><min>0.0</min><max>0.15</max><precision>0.005</precision>
+            </option>
             <option name="window_thickness" type="double">
                 <_short>Window edge thickness</_short>
                 <_long>Extrude each pop-out window's border pixels inward. Zero disables. Requires GLES 3.2; per-window silhouette processing costs GPU time.</_long>
@@ -410,6 +473,7 @@
 				<value>shader</value>
 				<_name>Animated shader</_name>
 			</desc>
+            <desc><value>alternative_shader</value><_name>Alternative shader</_name></desc>
 			<desc>
 				<value>image</value>
 				<_name>Picture</_name>

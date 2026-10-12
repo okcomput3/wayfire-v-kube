@@ -476,3 +476,69 @@ backdrop, so wallpaper/blur is not used as the side material. This requires the
 GLES 3.2 rendering path. Thickness fades with cube activation and works with
 separate window depths. It adds per-window captures and GPU silhouette work;
 it is disabled by default. Geometry and shaders live in `window-thickness.cpp`.
+
+**Desktop face thickness** provides the same border-pixel extrusion independently
+for desktop faces. Try 0.02–0.04; zero disables it. The outline follows desktop
+rounding and the sides sample the desktop texture before glass blur. Thickness
+fades with activation and follows the deformed surface normal, including cylinder
+and star modes. Like window thickness, it requires GLES 3.2 and adds GPU work.
+
+Thickness rendering conservatively rejects off-screen faces and 128-pixel
+texture tiles before silhouette geometry runs. Visible regions are merged into
+draw calls. Bounds include extrusion depth and animated deformation, and use
+each output's projection so panoramic slices skip unrelated regions. This is
+frustum culling, not an occlusion test: rear geometry that may be visible through
+transparent faces or open caps is retained.
+
+### Cosmic accents
+
+Optional reference-inspired effects are under **Cosmic accents** in WCM:
+**Glowing cap rims** (requires caps enabled), **Orbital light rings**, and
+**Orbiting star sparkles**. Each defaults off. Start with brightness 1.0 and
+speed 1.0, then adjust to taste. These add cyan/gold highlights and orbiting
+trails without changing the existing cap picture, lighting, mist or thickness.
+The rounded rim follows cube/cylinder/star deformation; effects fade with cube
+activation and use the shared multimonitor clock. Opaque scene geometry occludes
+hidden accents. The glow is stylized additive geometry, not reflections, optical
+bloom or holographic panels. No new textures or full-screen postprocessing are
+required. Implementation is isolated in `cosmic-accents.cpp/.hpp`.
+
+Orbital rings use compact spacing by default, with smoothly tapered trails and
+moving thicker highlights. **Ring distance from cube** defaults to 0.08 (previous
+fixed spacing was 0.32, plus a wider second ring). **Ring trail thickness** scales
+the width variation; start at 1.0. Ring tilt is reduced and the two tracks sit
+near the top/bottom edges. Orbiting sparkles follow the same compact tracks.
+
+**Crystal cap highlights** (off by default) adds view-dependent cyan/gold glints
+and a grazing-angle sheen under Cosmic accents. **Crystal highlight strength**
+controls their intensity. It preserves picture coverage and cap alpha, works
+with existing bump mapping, and fades with cube activation. These are stylized
+specular highlights, not reflections of the desktop or other windows.
+
+The panorama recorder accepts `--ready-file PATH` for automation: it creates a
+new file after the first frame reaches the encoder. Automated camera movement
+and cube closure should wait for this signal rather than a startup delay.
+
+### Selective bloom
+
+Enable **Selective bloom → Enable accent bloom** for halos around cosmic rims,
+rings, sparkles and searchlights. Adjust strength (default 1), spread (8 pixels)
+and brightness threshold (0.15). Fast quality blurs at quarter resolution; High
+uses half resolution. Off by default, with buffers released when unused.
+
+The source is the positive RGB difference before and after those additive
+accents, so desktop text, wallpaper, and cap pictures are not bloom sources.
+Crystal cap highlights are currently excluded. Bright backgrounds can reduce
+bloom because the output clamps colour before extraction. Blur operates within
+each output; light outside a monitor's capture cannot spill into its neighbor.
+Two full-resolution RGB snapshots are required, but all four blur passes run
+at reduced resolution. Implementation: `accent-bloom.cpp/.hpp`.
+
+### Alternative shader background
+
+Choose **Background mode → Alternative shader** for a modified copy of the original
+volumetric shader: gold emission clouds, deep blue space and moving stars,
+with faster drifting motion and stronger contrast inspired by the cosmic reference. **Animated shader** remains
+the original scene. Both use **Shader background resolution** and span the
+participating monitors. The new shader is in `alternative-background.tpp`;
+it adds only the background, not the reference's holographic panels or crystals.
