@@ -21,22 +21,22 @@
 			<option name="rotate_left" type="activator">
 				<_short>Rotate left</_short>
 				<_long>Rotates left with the specified activator.</_long>
-				<default>none</default>
+				<default>&lt;alt&gt; &lt;ctrl&gt; KEY_LEFT</default>
 			</option>
 			<option name="rotate_right" type="activator">
 				<_short>Rotate right</_short>
 				<_long>Rotates right with the specified activator.</_long>
-				<default>none</default>
+				<default>&lt;alt&gt; &lt;ctrl&gt; KEY_RIGHT</default>
 			</option>
 			<option name="rotate_up" type="activator">
 				<_short>Rotate up</_short>
 				<_long>Moves to the workspace row above with the specified activator.</_long>
-				<default>none</default>
+				<default>&lt;alt&gt; &lt;ctrl&gt; KEY_UP</default>
 			</option>
 			<option name="rotate_down" type="activator">
 				<_short>Rotate down</_short>
 				<_long>Moves to the workspace row below with the specified activator.</_long>
-				<default>none</default>
+				<default>&lt;alt&gt; &lt;ctrl&gt; KEY_DOWN</default>
 			</option>
 		</group>
         <group>
@@ -44,7 +44,7 @@
             <option name="object_enabled" type="bool">
                 <_short>Enable 3D model</_short>
                 <_long>Place a textured model inside each cube row. Transparent desktops and caps reveal it.</_long>
-                <default>false</default>
+                <default>true</default>
             </option>
             <option name="object_path" type="string">
                 <_short>OBJ/GLB model or folder path</_short>
@@ -66,12 +66,12 @@
             <option name="object_animation_speed" type="double">
                 <_short>Animation speed</_short>
                 <_long>Playback multiplier. 1 is normal speed; 0.5 is half speed.</_long>
-                <default>1.0</default><min>0.05</min><max>5.0</max><precision>0.05</precision>
+                <default>1.5</default><min>0.05</min><max>5.0</max><precision>0.05</precision>
             </option>
             <option name="object_scale" type="double">
                 <_short>Object size</_short>
                 <_long>Largest model dimension in desktop-height units. Models are automatically centered.</_long>
-                <default>0.6</default><min>0.05</min><max>10.0</max><precision>0.05</precision>
+                <default>1</default><min>0.05</min><max>10.0</max><precision>0.05</precision>
             </option>
             <option name="object_position_x" type="double">
                 <_short>Object position X</_short>
@@ -81,7 +81,7 @@
             <option name="object_position_y" type="double">
                 <_short>Object position Y</_short>
                 <_long>Vertical offset from each cube row centre, in desktop-height units. Moves with the cube and is independent of object size and rotation.</_long>
-                <default>0.0</default><min>-10.0</min><max>10.0</max><precision>0.05</precision>
+                <default>0.3</default><min>-10.0</min><max>10.0</max><precision>0.05</precision>
             </option>
             <option name="object_position_z" type="double">
                 <_short>Object position Z</_short>
@@ -91,7 +91,7 @@
             <option name="object_flip_vertical" type="bool">
                 <_short>Flip object vertically</_short>
                 <_long>Turn an upside-down model upright by rotating it 180 degrees around its local front axis. Keeps textures attached and preserves lighting.</_long>
-                <default>false</default>
+                <default>true</default>
             </option>
             <option name="object_rotation" type="double">
                 <_short>Object rotation</_short>
@@ -104,46 +104,46 @@
             <option name="cinematic_left" type="activator">
                 <_short>Cinematic sweep left</_short>
                 <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
-                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_LEFT</default>
+                <default>&lt;ctrl&gt; &lt;shift&gt; KEY_LEFT</default>
             </option>
             <option name="cinematic_right" type="activator">
                 <_short>Cinematic sweep right</_short>
                 <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
-                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_RIGHT</default>
+                <default>&lt;ctrl&gt; &lt;shift&gt; KEY_RIGHT</default>
             </option>
             <option name="cinematic_up" type="activator">
                 <_short>Cinematic sweep up</_short>
                 <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
-                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_UP</default>
+                <default>&lt;ctrl&gt; &lt;shift&gt; KEY_UP</default>
             </option>
             <option name="cinematic_down" type="activator">
                 <_short>Cinematic sweep down</_short>
                 <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
-                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_DOWN</default>
+                <default>&lt;ctrl&gt; &lt;shift&gt; KEY_DOWN</default>
             </option>
             <option name="cinematic_duration" type="double">
                 <_short>Camera sweep duration</_short>
                 <_long>Length of each cinematic camera move in seconds.</_long>
-                <default>2.4</default><min>0.5</min><max>10.0</max><precision>0.1</precision>
+                <default>4.2</default><min>0.5</min><max>10.0</max><precision>0.1</precision>
             </option>
             <option name="cinematic_strength" type="double">
                 <_short>Camera sweep strength</_short>
                 <_long>Amount of orbit, banking and camera pullback.</_long>
-                <default>1.0</default><min>0.1</min><max>2.0</max><precision>0.05</precision>
+                <default>2</default><min>0.1</min><max>2.0</max><precision>0.05</precision>
             </option>
         </group>
         <group>
             <_short>Selective bloom</_short>
             <option name="bloom_enabled" type="bool"><_short>Enable accent bloom</_short>
-                <_long>Glow around cosmic rims, rings, sparkles and searchlights. Desktop text is excluded from the bloom source.</_long><default>false</default></option>
+                <_long>Glow around cosmic rims, rings, sparkles and searchlights. Desktop text is excluded from the bloom source.</_long><default>true</default></option>
             <option name="bloom_strength" type="double"><_short>Bloom strength</_short>
-                <default>1.0</default><min>0.0</min><max>4.0</max><precision>0.1</precision></option>
+                <default>4</default><min>0.0</min><max>4.0</max><precision>0.1</precision></option>
             <option name="bloom_spread" type="double"><_short>Bloom spread</_short>
-                <default>8.0</default><min>1.0</min><max>24.0</max><precision>1.0</precision></option>
+                <default>10</default><min>1.0</min><max>24.0</max><precision>1.0</precision></option>
             <option name="bloom_threshold" type="double"><_short>Bloom brightness threshold</_short>
                 <default>0.15</default><min>0.0</min><max>1.0</max><precision>0.05</precision></option>
             <option name="bloom_quality" type="int"><_short>Bloom quality</_short>
-                <default>0</default><min>0</min><max>1</max>
+                <default>1</default><min>0</min><max>1</max>
                 <desc><value>0</value><_name>Fast (quarter resolution)</_name></desc>
                 <desc><value>1</value><_name>High (half resolution)</_name></desc></option>
         </group>
@@ -152,16 +152,16 @@
             <option name="cap_crystal" type="bool">
                 <_short>Crystal cap highlights</_short>
                 <_long>Glossy cyan/gold glints and grazing-angle highlights on the cap. Preserves cap transparency; stylized lighting, not scene reflections.</_long>
-                <default>false</default>
+                <default>true</default>
             </option>
             <option name="cap_crystal_strength" type="double">
                 <_short>Crystal highlight strength</_short>
-                <default>1.0</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
+                <default>3</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
             </option>
             <option name="cosmic_rims" type="bool">
                 <_short>Glowing cap rims</_short>
                 <_long>Cyan and gold highlights around the cap perimeter. Requires caps enabled.</_long>
-                <default>false</default>
+                <default>true</default>
             </option>
             <option name="cosmic_rings" type="bool">
                 <_short>Orbital light rings</_short>
@@ -173,7 +173,7 @@
             </option>
             <option name="cosmic_intensity" type="double">
                 <_short>Accent brightness</_short>
-                <default>1.0</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
+                <default>0.7</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
             </option>
             <option name="cosmic_ring_gap" type="double">
                 <_short>Ring distance from cube</_short>
@@ -183,11 +183,11 @@
             <option name="cosmic_ring_width" type="double">
                 <_short>Ring trail thickness</_short>
                 <_long>Scales the tapered trail and thicker moving highlights.</_long>
-                <default>1.0</default><min>0.25</min><max>3.0</max><precision>0.05</precision>
+                <default>3</default><min>0.25</min><max>3.0</max><precision>0.05</precision>
             </option>
             <option name="cosmic_speed" type="double">
                 <_short>Accent animation speed</_short>
-                <default>1.0</default><min>0.1</min><max>5.0</max><precision>0.1</precision>
+                <default>4.6</default><min>0.1</min><max>5.0</max><precision>0.1</precision>
             </option>
         </group>
         <group>
@@ -199,11 +199,11 @@
             </option>
             <option name="mist_density" type="double">
                 <_short>Mist density</_short>
-                <default>1.0</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
+                <default>3</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
             </option>
             <option name="mist_speed" type="double">
                 <_short>Mist drift speed</_short>
-                <default>1.0</default><min>0.1</min><max>5.0</max><precision>0.1</precision>
+                <default>5</default><min>0.1</min><max>5.0</max><precision>0.1</precision>
             </option>
         </group>
         <group>
@@ -220,43 +220,43 @@
             </option>
             <option name="searchlights_refractive_index" type="double">
                 <_short>Beam refractive index</_short>
-                <default>1.45</default><min>1.0</min><max>2.5</max><precision>0.05</precision>
+                <default>2.5</default><min>1.0</min><max>2.5</max><precision>0.05</precision>
             </option>
             <option name="searchlights_speed" type="double">
                 <_short>Rotation speed</_short>
-                <default>1.0</default><min>0.1</min><max>5.0</max>
+                <default>0.1</default><min>0.1</min><max>5.0</max>
                 <precision>0.1</precision>
             </option>
             <option name="searchlights_intensity" type="double">
                 <_short>Beam brightness</_short>
-                <default>1.0</default><min>0.0</min><max>3.0</max>
+                <default>0.2</default><min>0.0</min><max>3.0</max>
                 <precision>0.1</precision>
             </option>
             <option name="searchlights_length" type="double">
                 <_short>Beam reach</_short>
-                <default>3.0</default><min>0.5</min><max>10.0</max>
+                <default>3.4</default><min>0.5</min><max>10.0</max>
                 <precision>0.1</precision>
             </option>
             <option name="searchlights_count" type="int">
                 <_short>Beams per cube</_short>
-                <default>6</default><min>1</min><max>12</max>
+                <default>12</default><min>1</min><max>12</max>
             </option>
         </group>
 		<!-- Effects -->
 		<option name="rounded_corners" type="bool">
 			<_short>Rounded antialiased corners</_short>
 			<_long>Round and soften cube face and cap edges. Turn off for sharp polygon corners.</_long>
-			<default>true</default>
+			<default>false</default>
 		</option>
 		<option name="transverse_row" type="bool">
 			<_short>Transverse row</_short>
 			<_long>Travel vertically between neighboring cube rows. Both rows are visible during the move. Only the selected row is visible at rest. Takes priority over Vertical disappear mode.</_long>
-			<default>false</default>
+			<default>true</default>
 		</option>
 		<option name="transverse_row_duration" type="int">
 			<_short>Transverse row transition time (ms)</_short>
 			<_long>Time in milliseconds for a transverse row move. Higher values make the trip slower.</_long>
-			<default>300</default>
+			<default>1000</default>
 			<min>1</min>
 			<max>10000</max>
 		</option>
@@ -268,7 +268,7 @@
 		<option name="mirror_outputs" type="bool">
 			<_short>Mirror cube on all monitors</_short>
 			<_long>Show the activating monitor's cube on every monitor with shared controls. On exit, select the same workspace on each monitor, clamped to its workspace grid. Disable for independent per-monitor cubes.</_long>
-			<default>true</default>
+			<default>false</default>
 		</option>
 		<option name="deform" type="int">
 			<_short>Deformation</_short>
@@ -292,7 +292,7 @@
 		<option name="light" type="bool">
 			<_short>Use lighting</_short>
 			<_long>Specifies whether to use lighting.</_long>
-			<default>true</default>
+			<default>false</default>
 		</option>
 		<!-- Window Popout -->
 		<group>
@@ -334,12 +334,12 @@
             <option name="per_window_depth" type="bool">
                 <_short>Separate depth for each window</_short>
                 <_long>Pop out each window at its own depth, preserving stacking order. Uses additional rendering and GPU memory.</_long>
-                <default>false</default>
+                <default>true</default>
             </option>
             <option name="window_depth_spacing" type="double">
                 <_short>Window depth spacing</_short>
                 <_long>Extra separation per window, relative to the normal popout distance.</_long>
-                <default>0.25</default><min>0.0</min><max>1.0</max><precision>0.05</precision>
+                <default>1</default><min>0.0</min><max>1.0</max><precision>0.05</precision>
             </option>
 			<option name="popout_opacity" type="double">
 				<_short>Popout opacity</_short>
@@ -355,7 +355,7 @@
             <option name="desktop_opacity" type="double">
                 <_short>Desktop opacity</_short>
                 <_long>Opacity of cube desktop faces. Popped-out windows keep their separate opacity.</_long>
-                <default>1.0</default><min>0.0</min><max>1.0</max><precision>0.01</precision>
+                <default>0.5</default><min>0.0</min><max>1.0</max><precision>0.01</precision>
             </option>
             <option name="desktop_blur" type="bool">
                 <_short>Blur behind desktop faces</_short>
@@ -373,15 +373,15 @@
             <option name="dynamic_lighting" type="bool">
                 <_short>Orbiting colored lights</_short>
                 <_long>Animate three hue-changing point lights inside each cube, illuminating faces, windows and caps.</_long>
-                <default>false</default>
+                <default>true</default>
             </option>
             <option name="lighting_strength" type="double">
                 <_short>Interior light strength</_short>
-                <default>0.7</default><min>0.0</min><max>2.0</max><precision>0.05</precision>
+                <default>0.1</default><min>0.0</min><max>2.0</max><precision>0.05</precision>
             </option>
             <option name="lighting_speed" type="double">
                 <_short>Interior light speed</_short>
-                <default>1.0</default><min>0.1</min><max>4.0</max><precision>0.1</precision>
+                <default>2.3</default><min>0.1</min><max>4.0</max><precision>0.1</precision>
             </option>
         </group>
 		<!-- Cube Caps -->
@@ -396,7 +396,7 @@
             <option name="cap_picture_underlay" type="bool">
                 <_short>Cap colour underneath pictures</_short>
                 <_long>Fill transparent picture areas with the top or bottom cap colour. Disable to preserve the picture's own transparency.</_long>
-                <default>false</default>
+                <default>true</default>
             </option>
             <option name="cap_rotation_top" type="double">
                 <_short>Top cap picture rotation</_short>
@@ -417,7 +417,7 @@
             <option name="cap_bump_3d" type="bool">
                 <_short>3D cap ripples</_short>
                 <_long>Displace the cap mesh into real 3D ripples, including cap pictures. Adds geometry and rendering cost; edges remain attached to the cube.</_long>
-                <default>false</default>
+                <default>true</default>
             </option>
             <option name="cap_bump_mapping" type="bool">
                 <_short>Cap bump mapping</_short>
@@ -427,7 +427,7 @@
 			<option name="cap_alpha" type="double">
 				<_short>Cap transparency</_short>
 				<_long>Sets the transparency of the cube caps. 1.0 = fully opaque, 0.0 = fully transparent.</_long>
-				<default>0.8</default>
+				<default>0.56</default>
 				<min>0.0</min>
 				<max>1.0</max>
 				<precision>0.01</precision>
@@ -435,12 +435,12 @@
 			<option name="cap_color_top" type="color">
 				<_short>Top cap color</_short>
 				<_long>Sets the color/tint for the top cap of the cube.</_long>
-				<default>0.8 0.8 0.8 1.0</default>
+				<default>0.1961 0.1961 0.1961 1.0000</default>
 			</option>
 			<option name="cap_color_bottom" type="color">
 				<_short>Bottom cap color</_short>
 				<_long>Sets the color/tint for the bottom cap of the cube.</_long>
-				<default>0.8 0.8 0.8 1.0</default>
+				<default>0.1961 0.1961 0.1961 1.0000</default>
 			</option>
 			<option name="cap_texture_top" type="string">
 				<_short>Top cap texture</_short>
@@ -459,19 +459,19 @@
 		<option name="zoom" type="double">
 			<_short>Zoom</_short>
 			<_long>Sets the level of zoom out.  Setting the value to **0.0** means to not zoom out.</_long>
-			<default>0.1</default>
+			<default>0.8</default>
 			<precision>0.01</precision>
 		</option>
 		<option name="initial_animation" type="animation">
 			<_short>Duration</_short>
 			<_long>Sets the initial animation duration in milliseconds.</_long>
-			<default>350ms</default>
+			<default>352ms linear</default>
 		</option>
 		<!-- Velocity -->
 		<option name="speed_zoom" type="double">
 			<_short>Zoom speed</_short>
 			<_long>Sets the speed factor for zooming.</_long>
-			<default>0.07</default>
+			<default>0.11</default>
 			<precision>0.01</precision>
 		</option>
 		<option name="speed_spin_horiz" type="double">
@@ -495,7 +495,7 @@
 		<option name="background_mode" type="string">
 			<_short>Background mode</_short>
 			<_long>Selects a solid color, flat picture, skydome, cubemap, or animated shader.</_long>
-			<default>simple</default>
+			<default>alternative_shader</default>
 			<desc>
 				<value>shader</value>
 				<_name>Animated shader</_name>
@@ -527,7 +527,7 @@
 		<option name="background" type="color">
 			<_short>Background color</_short>
 			<_long>Sets the background color for the simple background mode.</_long>
-			<default>0.1 0.1 0.1 1.0</default>
+			<default>0.1019607843 0.1019607843 0.1019607843 1</default>
 		</option>
 		<!-- Skydome -->
 		<option name="skydome_mirror" type="bool">
