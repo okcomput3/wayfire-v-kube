@@ -147,11 +147,11 @@ void wf_cube_background_skydome::render_frame(const wf::render_target_t& fb,
     program.uniform1i("translucent_only", 0);
 
     auto rotation = glm::rotate(glm::mat4(1.0),
-        (float)(attribs.cube_animation.offset_y * 0.5),
+        (float)(attribs.frame_offset_y * 0.5),
         glm::vec3(1., 0., 0.));
 
     auto view = glm::lookAt(glm::vec3(0., 0., 0.),
-        glm::vec3(0., 0., -attribs.cube_animation.offset_z),
+        glm::vec3(0., 0., -attribs.frame_offset_z),
         glm::vec3(0., 1., 0.));
 
     auto vp = wf::gles::output_transform(fb) * attribs.projection * view * rotation;
@@ -162,7 +162,7 @@ void wf_cube_background_skydome::render_frame(const wf::render_target_t& fb,
 
     auto cws   = output->wset()->get_current_workspace();
     auto model = glm::rotate(glm::mat4(1.0),
-        float(attribs.cube_animation.rotation) - cws.x * attribs.side_angle,
+        float(attribs.frame_rotation) - cws.x * attribs.side_angle,
         glm::vec3(0, 1, 0));
 
     program.uniformMatrix4f("model", model);

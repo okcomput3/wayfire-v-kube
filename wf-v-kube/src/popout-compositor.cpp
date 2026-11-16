@@ -286,3 +286,64 @@ void popout_compositor_t::render(std::vector<wf::scene::render_instance_uptr>& i
         GL_CALL(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
     });
 }
+
+void popout_compositor_t::render_separate(const wf::render_target_t& target,
+    wf::auxilliary_buffer_t& backdrop, wf::output_t *output, int face, int row,
+    std::vector<popout_window_layer_t>& layers, size_t& used, bool capture_edges)
+{
+    auto ordered = windows;
+    stacked_backdrop.allocate(wf::dimensions(target.geometry), target.scale);
+    wf::render_target_t stack_target{stacked_backdrop};
+    stack_target.geometry = target.geometry;
+    stack_target.scale = target.scale;
+    wf::gles::run_in_context([&]
+    {
+        wf::gles::bind_render_buffer(stack_target);
+        GL_CALL(glDisable(GL_SCISSOR_TEST));
+        OpenGL::clear({0, 0, 0, 0});
+        OpenGL::render_texture(wf::gles_texture_t::from_aux(backdrop), stack_target, stack_target.geometry);
+    });
+    // Wayfire returns front-to-back stacking. Build native blur backdrops from
+    // the bottom upwards, but preserve the same rank on every workspace slice.
+    for (int index = int(ordered.size()) - 1; index >= 0; --index)
+    {
+        const auto entry = ordered[index];
+        damage_region_t overlap{entry.node->get_bounding_box()};
+        overlap.expand_edges(1);
+        overlap &= target.geometry;
+        if (overlap.empty()) continue;
+        if (used == layers.size()) layers.emplace_back();
+        auto& layer = layers[used++];
+        layer.face = face; layer.row = row; layer.rank = int(ordered.size()) - 1 - index;
+        layer.buffer.allocate(wf::dimensions(target.geometry), target.scale);
+        wf::render_target_t single_target{layer.buffer};
+        single_target.geometry = target.geometry;
+        single_target.scale = target.scale;
+        std::vector<wf::scene::render_instance_uptr> instances;
+        entry.node->gen_render_instances(instances, [] (const damage_region_t&) {}, output);
+        if (capture_edges)
+        {
+            // Capture against transparent black BEFORE adding any blur backdrop.
+            // Native blur retains the window's actual alpha in this pass.
+            layer.edge_pixels.allocate(wf::dimensions(target.geometry),target.scale);
+            wf::render_target_t edge_target{layer.edge_pixels};
+            edge_target.geometry=target.geometry; edge_target.scale=target.scale;
+            wf::render_pass_params_t params;
+            params.instances=&instances; params.target=edge_target;
+            params.damage=target.geometry; params.background_color={0,0,0,0};
+            params.reference_output=nullptr;
+            params.flags=wf::RPASS_CLEAR_BACKGROUND | wf::RPASS_EMIT_SIGNALS;
+            wf::render_pass_t::run(params);
+        } else layer.edge_pixels.free();
+        windows = {entry};
+        render(instances, single_target, stacked_backdrop, output);
+        wf::gles::run_in_context([&]
+        {
+            wf::gles::bind_render_buffer(stack_target);
+            GL_CALL(glDisable(GL_DEPTH_TEST));
+            GL_CALL(glDisable(GL_SCISSOR_TEST));
+            OpenGL::render_texture(wf::gles_texture_t::from_aux(layer.buffer), stack_target, stack_target.geometry);
+        });
+    }
+    windows = std::move(ordered);
+}

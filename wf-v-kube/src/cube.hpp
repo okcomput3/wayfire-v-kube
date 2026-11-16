@@ -27,6 +27,11 @@ struct wf_cube_animation_attribs
     wf::option_wrapper_t<wf::animation_description_t> animation_duration{"vertical_kube/initial_animation"};
     cube_animation_t cube_animation{animation_duration};
 
+    // Sampled once by the controller, shared by every output render.
+    float frame_rotation = 0, frame_zoom = 1, frame_offset_y = 0;
+    float frame_offset_z = 1, frame_ease = 0, frame_time = 0;
+    glm::vec2 background_uv_origin{0, 0}, background_uv_scale{1, 1};
+    glm::vec2 background_size{1, 1};
     glm::mat4 projection, view;
     float side_angle;
 

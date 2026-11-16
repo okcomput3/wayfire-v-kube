@@ -13,6 +13,11 @@
 				<_long>Activates the cube with the specified button.</_long>
 				<default>&lt;ctrl&gt; &lt;alt&gt; BTN_LEFT</default>
 			</option>
+			<option name="toggle_panorama" type="activator">
+				<_short>Toggle panoramic cube</_short>
+				<_long>While the mirrored cube is open, smoothly join the monitors into one panoramic view. Each face shows the monitors' desktops side by side. Requires matching workspace grids.</_long>
+				<default>&lt;ctrl&gt; KEY_K</default>
+			</option>
 			<option name="rotate_left" type="activator">
 				<_short>Rotate left</_short>
 				<_long>Rotates left with the specified activator.</_long>
@@ -34,7 +39,237 @@
 				<default>none</default>
 			</option>
 		</group>
+        <group>
+            <_short>Object inside cube</_short>
+            <option name="object_enabled" type="bool">
+                <_short>Enable 3D model</_short>
+                <_long>Place a textured model inside each cube row. Transparent desktops and caps reveal it.</_long>
+                <default>false</default>
+            </option>
+            <option name="object_path" type="string">
+                <_short>OBJ/GLB model or folder path</_short>
+                <hint>file</hint>
+                <hint>directory</hint>
+                <_long>Path to an OBJ or GLB model, or a folder of models. GLB loads meshes with embedded PNG/JPEG textures, base-color materials and looping animation clips. A folder selects a random model on each cube activation, shared across monitors, without immediate repeats when possible. Only files directly inside the folder are selected. Supports positions, normals, triangles and convex polygons. Export concave polygons as triangles. MTL materials and diffuse, specular and opacity textures load automatically. Keep material and texture files with the model. Change the path to reload.</_long>
+                <default></default>
+            </option>
+            <option name="object_animation" type="bool">
+                <_short>Play model animation</_short>
+                <_long>Loop the selected GLB animation while the cube is open. Supports node transforms, skeletal skinning and morph targets. Disable to show the rest pose.</_long>
+                <default>true</default>
+            </option>
+            <option name="object_animation_clip" type="int">
+                <_short>Animation clip</_short>
+                <_long>Zero-based clip number. Clip names are printed in the Wayfire log when loading. Fox: 0 Survey, 1 Walk, 2 Run. Out-of-range values use the nearest available clip.</_long>
+                <default>0</default><min>0</min><max>1000</max>
+            </option>
+            <option name="object_animation_speed" type="double">
+                <_short>Animation speed</_short>
+                <_long>Playback multiplier. 1 is normal speed; 0.5 is half speed.</_long>
+                <default>1.0</default><min>0.05</min><max>5.0</max><precision>0.05</precision>
+            </option>
+            <option name="object_scale" type="double">
+                <_short>Object size</_short>
+                <_long>Largest model dimension in desktop-height units. Models are automatically centered.</_long>
+                <default>0.6</default><min>0.05</min><max>10.0</max><precision>0.05</precision>
+            </option>
+            <option name="object_position_x" type="double">
+                <_short>Object position X</_short>
+                <_long>Left/right offset from each cube row centre, in desktop-height units. Moves with the cube and is independent of object size and rotation.</_long>
+                <default>0.0</default><min>-10.0</min><max>10.0</max><precision>0.05</precision>
+            </option>
+            <option name="object_position_y" type="double">
+                <_short>Object position Y</_short>
+                <_long>Vertical offset from each cube row centre, in desktop-height units. Moves with the cube and is independent of object size and rotation.</_long>
+                <default>0.0</default><min>-10.0</min><max>10.0</max><precision>0.05</precision>
+            </option>
+            <option name="object_position_z" type="double">
+                <_short>Object position Z</_short>
+                <_long>Front/back offset from each cube row centre, in desktop-height units. Moves with the cube and is independent of object size and rotation.</_long>
+                <default>0.0</default><min>-10.0</min><max>10.0</max><precision>0.05</precision>
+            </option>
+            <option name="object_flip_vertical" type="bool">
+                <_short>Flip object vertically</_short>
+                <_long>Turn an upside-down model upright by rotating it 180 degrees around its local front axis. Keeps textures attached and preserves lighting.</_long>
+                <default>false</default>
+            </option>
+            <option name="object_rotation" type="double">
+                <_short>Object rotation</_short>
+                <_long>Rotate the model around its vertical axis in degrees.</_long>
+                <default>0.0</default><min>-180.0</min><max>180.0</max><precision>1.0</precision>
+            </option>
+        </group>
+        <group>
+            <_short>Cinematic camera</_short>
+            <option name="cinematic_left" type="activator">
+                <_short>Cinematic sweep left</_short>
+                <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
+                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_LEFT</default>
+            </option>
+            <option name="cinematic_right" type="activator">
+                <_short>Cinematic sweep right</_short>
+                <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
+                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_RIGHT</default>
+            </option>
+            <option name="cinematic_up" type="activator">
+                <_short>Cinematic sweep up</_short>
+                <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
+                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_UP</default>
+            </option>
+            <option name="cinematic_down" type="activator">
+                <_short>Cinematic sweep down</_short>
+                <_long>While the cube is open, play a banking camera arc and return smoothly. Press another direction to queue the next sweep.</_long>
+                <default>&lt;ctrl&gt; &lt;alt&gt; &lt;shift&gt; KEY_DOWN</default>
+            </option>
+            <option name="cinematic_duration" type="double">
+                <_short>Camera sweep duration</_short>
+                <_long>Length of each cinematic camera move in seconds.</_long>
+                <default>2.4</default><min>0.5</min><max>10.0</max><precision>0.1</precision>
+            </option>
+            <option name="cinematic_strength" type="double">
+                <_short>Camera sweep strength</_short>
+                <_long>Amount of orbit, banking and camera pullback.</_long>
+                <default>1.0</default><min>0.1</min><max>2.0</max><precision>0.05</precision>
+            </option>
+        </group>
+        <group>
+            <_short>Selective bloom</_short>
+            <option name="bloom_enabled" type="bool"><_short>Enable accent bloom</_short>
+                <_long>Glow around cosmic rims, rings, sparkles and searchlights. Desktop text is excluded from the bloom source.</_long><default>false</default></option>
+            <option name="bloom_strength" type="double"><_short>Bloom strength</_short>
+                <default>1.0</default><min>0.0</min><max>4.0</max><precision>0.1</precision></option>
+            <option name="bloom_spread" type="double"><_short>Bloom spread</_short>
+                <default>8.0</default><min>1.0</min><max>24.0</max><precision>1.0</precision></option>
+            <option name="bloom_threshold" type="double"><_short>Bloom brightness threshold</_short>
+                <default>0.15</default><min>0.0</min><max>1.0</max><precision>0.05</precision></option>
+            <option name="bloom_quality" type="int"><_short>Bloom quality</_short>
+                <default>0</default><min>0</min><max>1</max>
+                <desc><value>0</value><_name>Fast (quarter resolution)</_name></desc>
+                <desc><value>1</value><_name>High (half resolution)</_name></desc></option>
+        </group>
+        <group>
+            <_short>Cosmic accents</_short>
+            <option name="cap_crystal" type="bool">
+                <_short>Crystal cap highlights</_short>
+                <_long>Glossy cyan/gold glints and grazing-angle highlights on the cap. Preserves cap transparency; stylized lighting, not scene reflections.</_long>
+                <default>false</default>
+            </option>
+            <option name="cap_crystal_strength" type="double">
+                <_short>Crystal highlight strength</_short>
+                <default>1.0</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
+            </option>
+            <option name="cosmic_rims" type="bool">
+                <_short>Glowing cap rims</_short>
+                <_long>Cyan and gold highlights around the cap perimeter. Requires caps enabled.</_long>
+                <default>false</default>
+            </option>
+            <option name="cosmic_rings" type="bool">
+                <_short>Orbital light rings</_short>
+                <default>false</default>
+            </option>
+            <option name="cosmic_sparkles" type="bool">
+                <_short>Orbiting star sparkles</_short>
+                <default>false</default>
+            </option>
+            <option name="cosmic_intensity" type="double">
+                <_short>Accent brightness</_short>
+                <default>1.0</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
+            </option>
+            <option name="cosmic_ring_gap" type="double">
+                <_short>Ring distance from cube</_short>
+                <_long>Clearance beyond the deformed cube's outer radius. Smaller values keep the rings close to the cube.</_long>
+                <default>0.08</default><min>0.02</min><max>0.6</max><precision>0.01</precision>
+            </option>
+            <option name="cosmic_ring_width" type="double">
+                <_short>Ring trail thickness</_short>
+                <_long>Scales the tapered trail and thicker moving highlights.</_long>
+                <default>1.0</default><min>0.25</min><max>3.0</max><precision>0.05</precision>
+            </option>
+            <option name="cosmic_speed" type="double">
+                <_short>Accent animation speed</_short>
+                <default>1.0</default><min>0.1</min><max>5.0</max><precision>0.1</precision>
+            </option>
+        </group>
+        <group>
+            <_short>Cube mist</_short>
+            <option name="mist_enabled" type="bool">
+                <_short>Enable drifting mist</_short>
+                <_long>Soft animated smoke around each cube row, synchronized across monitors.</_long>
+                <default>false</default>
+            </option>
+            <option name="mist_density" type="double">
+                <_short>Mist density</_short>
+                <default>1.0</default><min>0.0</min><max>3.0</max><precision>0.1</precision>
+            </option>
+            <option name="mist_speed" type="double">
+                <_short>Mist drift speed</_short>
+                <default>1.0</default><min>0.1</min><max>5.0</max><precision>0.1</precision>
+            </option>
+        </group>
+        <group>
+            <_short>Rotating searchlights</_short>
+            <option name="searchlights_enabled" type="bool">
+                <_short>Enable rotating searchlights</_short>
+                <_long>Colored beams sweep out from each cube row centre, changing hue. Stylized glow, with opaque surfaces blocking hidden beam sections.</_long>
+                <default>false</default>
+            </option>
+            <option name="searchlights_refraction" type="bool">
+                <_short>Refract beams through cube</_short>
+                <_long>Treat each cube row as an optical solid. Bend rays at its sides and caps, including internal reflection. Uses the deformed envelope; decorative cap relief and rounded edges are excluded.</_long>
+                <default>false</default>
+            </option>
+            <option name="searchlights_refractive_index" type="double">
+                <_short>Beam refractive index</_short>
+                <default>1.45</default><min>1.0</min><max>2.5</max><precision>0.05</precision>
+            </option>
+            <option name="searchlights_speed" type="double">
+                <_short>Rotation speed</_short>
+                <default>1.0</default><min>0.1</min><max>5.0</max>
+                <precision>0.1</precision>
+            </option>
+            <option name="searchlights_intensity" type="double">
+                <_short>Beam brightness</_short>
+                <default>1.0</default><min>0.0</min><max>3.0</max>
+                <precision>0.1</precision>
+            </option>
+            <option name="searchlights_length" type="double">
+                <_short>Beam reach</_short>
+                <default>3.0</default><min>0.5</min><max>10.0</max>
+                <precision>0.1</precision>
+            </option>
+            <option name="searchlights_count" type="int">
+                <_short>Beams per cube</_short>
+                <default>6</default><min>1</min><max>12</max>
+            </option>
+        </group>
 		<!-- Effects -->
+		<option name="rounded_corners" type="bool">
+			<_short>Rounded antialiased corners</_short>
+			<_long>Round and soften cube face and cap edges. Turn off for sharp polygon corners.</_long>
+			<default>true</default>
+		</option>
+		<option name="transverse_row" type="bool">
+			<_short>Transverse row</_short>
+			<_long>Travel vertically between neighboring cube rows. Both rows are visible during the move. Only the selected row is visible at rest. Takes priority over Vertical disappear mode.</_long>
+			<default>false</default>
+		</option>
+		<option name="transverse_row_duration" type="int">
+			<_short>Transverse row transition time (ms)</_short>
+			<_long>Time in milliseconds for a transverse row move. Higher values make the trip slower.</_long>
+			<default>300</default>
+			<min>1</min>
+			<max>10000</max>
+		</option>
+		<option name="vertical_disappear" type="bool">
+			<_short>Vertical disappear mode</_short>
+			<_long>Show one row at a time. Vertical moves pull back and fade out the current cube, then bring the destination cube into view.</_long>
+			<default>false</default>
+		</option>
+		<option name="mirror_outputs" type="bool">
+			<_short>Mirror cube on all monitors</_short>
+			<_long>Show the activating monitor's cube on every monitor with shared controls. On exit, select the same workspace on each monitor, clamped to its workspace grid. Disable for independent per-monitor cubes.</_long>
+			<default>true</default>
+		</option>
 		<option name="deform" type="int">
 			<_short>Deformation</_short>
 			<_long>Specifies the deformation to be used.</_long>
@@ -68,7 +303,12 @@
 				<_long>Enables a separate floating window cube, retaining native window blur with the workspace wallpaper as its backdrop. Disable to render complete workspaces on the main cube. Change while the cube is closed.</_long>
 				<default>true</default>
 			</option>
-			<option name="popout_scale" type="double">
+			<option name="window_capture_fps" type="int">
+                <_short>Window capture refresh rate</_short>
+                <_long>Limit pop-out window captures while cube motion stays at the output refresh rate. 30 saves GPU work; 0 updates every rendered frame. Opening, closing and newly visible workspaces refresh immediately.</_long>
+                <default>30</default><min>0</min><max>240</max>
+            </option>
+            <option name="popout_scale" type="double">
 				<_short>Popout scale</_short>
 				<_long>Sets how much larger the window popout cube should be compared to the main cube. 1.0 = same size, 1.2 = 20% larger.</_long>
 				<default>1.20</default>
@@ -76,6 +316,31 @@
 				<max>2.0</max>
 				<precision>0.01</precision>
 			</option>
+            <option name="desktop_thickness" type="double">
+                <_short>Desktop face thickness</_short>
+                <_long>Extrude the rounded desktop perimeter inward using its edge pixels. Independent of window thickness. Zero disables. Requires GLES 3.2.</_long>
+                <default>0.0</default><min>0.0</min><max>0.15</max><precision>0.005</precision>
+            </option>
+            <option name="window_thickness" type="double">
+                <_short>Window edge thickness</_short>
+                <_long>Extrude each pop-out window's border pixels inward. Zero disables. Requires GLES 3.2; per-window silhouette processing costs GPU time.</_long>
+                <default>0.0</default><min>0.0</min><max>0.15</max><precision>0.005</precision>
+            </option>
+            <option name="window_edge_cutoff" type="double">
+                <_short>Window edge alpha cutoff</_short>
+                <_long>Ignore faint shadows when locating the border. Lower for translucent decorations; higher to exclude more shadow.</_long>
+                <default>0.8</default><min>0.05</min><max>1.0</max><precision>0.05</precision>
+            </option>
+            <option name="per_window_depth" type="bool">
+                <_short>Separate depth for each window</_short>
+                <_long>Pop out each window at its own depth, preserving stacking order. Uses additional rendering and GPU memory.</_long>
+                <default>false</default>
+            </option>
+            <option name="window_depth_spacing" type="double">
+                <_short>Window depth spacing</_short>
+                <_long>Extra separation per window, relative to the normal popout distance.</_long>
+                <default>0.25</default><min>0.0</min><max>1.0</max><precision>0.05</precision>
+            </option>
 			<option name="popout_opacity" type="double">
 				<_short>Popout opacity</_short>
 				<_long>Sets the opacity of the window popout cube. 1.0 = fully opaque, 0.5 = semi-transparent.</_long>
@@ -128,6 +393,37 @@
 				<_long>Enables rendering of top and bottom caps on the cube. Caps are N-sided polygons matching the number of workspace faces.</_long>
 				<default>true</default>
 			</option>
+            <option name="cap_picture_underlay" type="bool">
+                <_short>Cap colour underneath pictures</_short>
+                <_long>Fill transparent picture areas with the top or bottom cap colour. Disable to preserve the picture's own transparency.</_long>
+                <default>false</default>
+            </option>
+            <option name="cap_rotation_top" type="double">
+                <_short>Top cap picture rotation</_short>
+                <_long>Rotate only the top cap picture around its centre, in degrees.</_long>
+                <default>0.0</default>
+                <min>-180.0</min>
+                <max>180.0</max>
+                <precision>1.0</precision>
+            </option>
+            <option name="cap_rotation_bottom" type="double">
+                <_short>Bottom cap picture rotation</_short>
+                <_long>Rotate only the bottom cap picture around its centre, in degrees.</_long>
+                <default>0.0</default>
+                <min>-180.0</min>
+                <max>180.0</max>
+                <precision>1.0</precision>
+            </option>
+            <option name="cap_bump_3d" type="bool">
+                <_short>3D cap ripples</_short>
+                <_long>Displace the cap mesh into real 3D ripples, including cap pictures. Adds geometry and rendering cost; edges remain attached to the cube.</_long>
+                <default>false</default>
+            </option>
+            <option name="cap_bump_mapping" type="bool">
+                <_short>Cap bump mapping</_short>
+                <_long>Animate raised ripple lighting on the cube caps. Disable for a smooth cap surface.</_long>
+                <default>true</default>
+            </option>
 			<option name="cap_alpha" type="double">
 				<_short>Cap transparency</_short>
 				<_long>Sets the transparency of the cube caps. 1.0 = fully opaque, 0.0 = fully transparent.</_long>
@@ -204,6 +500,7 @@
 				<value>shader</value>
 				<_name>Animated shader</_name>
 			</desc>
+            <desc><value>alternative_shader</value><_name>Alternative shader</_name></desc>
 			<desc>
 				<value>image</value>
 				<_name>Picture</_name>

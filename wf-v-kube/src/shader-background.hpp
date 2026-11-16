@@ -4,7 +4,7 @@
 class wf_cube_shader_background : public wf_cube_background_base
 {
   public:
-    wf_cube_shader_background();
+    explicit wf_cube_shader_background(bool alternative = false);
     ~wf_cube_shader_background() override;
     void render_frame(const wf::render_target_t& target,
         wf_cube_animation_attribs& attribs) override;

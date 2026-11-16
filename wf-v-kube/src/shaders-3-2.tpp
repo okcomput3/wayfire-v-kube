@@ -161,6 +161,7 @@ uniform float surface_opacity;
 uniform bool depth_only;
 uniform bool translucent_only;
 uniform bool window_layer;
+uniform bool rounded_corners;
 void main() {
     highp vec4 texColor = texture(smp, guv);
     outColor = vec4(texColor.rgb * colorFactor, texColor.a);
@@ -180,6 +181,7 @@ uniform float surface_opacity;
 uniform bool depth_only;
 uniform bool translucent_only;
 uniform bool window_layer;
+uniform bool rounded_corners;
 
 
 uniform bool dynamic_lighting;
@@ -217,7 +219,7 @@ float roundedCornerMask(vec2 uv, float radius) {
     }
     if (corner_dist.x > 0.0 && corner_dist.y > 0.0) {
         float dist_to_corner = length(corner_dist);
-        return smoothstep(radius + 0.01, radius - 0.01, dist_to_corner);
+        return 1.0 - smoothstep(radius - 0.01, radius + 0.01, dist_to_corner);
     }
     return 1.0;
 }
@@ -232,14 +234,11 @@ float edgeAntiAliasMask(vec2 uv) {
 void main() {
     highp vec4 texColor = texture(smp, guv);
     
-    // Apply rounded corners
-    float corner_radius = 0.08;  // Adjust this value to control corner roundness
-    float corner_mask = roundedCornerMask(guv, corner_radius);
-    float edge_mask = edgeAntiAliasMask(guv);
-    // Workspace rounding belongs to the desktop, not to window fragments
-    // split across faces. Their original texture already carries window alpha.
-    float final_mask = window_layer ? 1.0 : min(corner_mask, edge_mask);
-    
+    float final_mask = 1.0;
+    if (rounded_corners && !window_layer) {
+        final_mask = min(roundedCornerMask(guv, 0.08), edgeAntiAliasMask(guv));
+    }
+
     // Apply lighting and masking
     vec3 finalColor = texColor.rgb * colorFactor * final_mask;
     float finalAlpha = texColor.a * final_mask;
